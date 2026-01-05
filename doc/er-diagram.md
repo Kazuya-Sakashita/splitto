@@ -1,14 +1,19 @@
-# ER Diagram（Mermaid）- Splitto（説明付き）
+# ER Diagram（Mermaid）- Splitto（説明付き / MySQL）
 
 このドキュメントは、割り勘・立替精算アプリ **Splitto** のデータモデルを
 ER図（Mermaid）とテーブル説明（Markdown）をセットで管理します。
 
-## 共通方針
-- DB：PostgreSQL 想定
+## 共通方針（MySQL）
+- DB：MySQL 8.x 想定
 - 金額：`*_cents`（整数）で保持（JPYでも整数で統一）
 - タイムゾーン：DBはUTC、表示はJST
-- 途中参加/途中退出：`group_members.left_at` で表現（NULL=在籍中）
+- 途中参加/途中退出：`members.active` + `left_at` で表現
+  - `active=1`：在籍中（`left_at` は NULL）
+  - `active=0`：退出済み（`left_at` は NOT NULL）
 - 削除：原則論理削除（`deleted_at`）
+- 監査ログ：重要操作は必ず残す
+- 認証方式：JWT 前提。ただしこのドキュメントでは認証用カラムを無理に追加しない（YAGNI）
+  - 認証まわりの追加カラムは「認証のIssue」で必要になったタイミングで追加する
 
 ---
 
@@ -17,31 +22,32 @@ ER図（Mermaid）とテーブル説明（Markdown）をセットで管理しま
 ```mermaid
 erDiagram
   USERS {
-    uuid id PK
-    string external_uid "Auth provider user id (JWT sub)"
-    string name
-    string email "nullable"
-    boolean email_verified "default false"
-    boolean email_notifications_enabled "default true"
+    char(36) id PK
+    varchar external_uid "Auth provider user id (JWT sub) UNIQUE"
+    varchar name
+    varchar email "nullable"
+    boolean notify_email "default true"
+    enum theme_mode "SYSTEM|LIGHT|DARK default SYSTEM"
     datetime created_at
     datetime updated_at
   }
 
   GROUPS {
-    uuid id PK
-    string name
-    uuid owner_user_id FK
-    string currency "default JPY"
-    string invite_token "unique"
+    char(36) id PK
+    varchar name
+    char(36) owner_id FK
+    varchar currency "default JPY"
+    varchar invite_token "UNIQUE"
     datetime created_at
     datetime updated_at
   }
 
-  GROUP_MEMBERS {
-    uuid id PK
-    uuid group_id FK
-    uuid user_id FK
-    string role "OWNER|MEMBER"
+  MEMBERS {
+    char(36) id PK
+    char(36) group_id FK
+    char(36) user_id FK
+    enum role "OWNER|MEMBER"
+    boolean active "default true"
     datetime joined_at
     datetime left_at "nullable"
     datetime created_at
@@ -49,105 +55,106 @@ erDiagram
   }
 
   EXPENSES {
-    uuid id PK
-    uuid group_id FK
-    uuid paid_by_user_id FK
-    uuid created_by_user_id FK
+    char(36) id PK
+    char(36) group_id FK
+    char(36) paid_by_id FK
+    char(36) created_by_id FK
     int amount_cents
-    date paid_at
-    string category "nullable"
+    date paid_on
+    varchar category "nullable"
     text note "nullable"
-    string split_type "EQUAL_ALL|EQUAL_SELECTED|AMOUNT|PERCENT"
+    enum split_type "EQUAL_ALL|EQUAL_SELECTED|AMOUNT|PERCENT"
     datetime deleted_at "nullable"
     datetime created_at
     datetime updated_at
   }
 
-  EXPENSE_SPLITS {
-    uuid id PK
-    uuid expense_id FK
-    uuid user_id FK
+  SPLITS {
+    char(36) id PK
+    char(36) expense_id FK
+    char(36) user_id FK
     int share_cents
     int share_percent "nullable"
     datetime created_at
     datetime updated_at
   }
 
-  EXPENSE_ATTACHMENTS {
-    uuid id PK
-    uuid expense_id FK
-    string file_key
-    string content_type "nullable"
+  ATTACHMENTS {
+    char(36) id PK
+    char(36) expense_id FK
+    varchar file_key
+    varchar content_type "nullable"
     int byte_size "nullable"
     datetime created_at
     datetime updated_at
   }
 
-  AUDIT_LOGS {
-    uuid id PK
-    uuid group_id "nullable FK"
-    uuid actor_user_id FK
-    string action
-    string target_type
-    uuid target_id
+  AUDITS {
+    char(36) id PK
+    char(36) group_id "nullable FK"
+    char(36) actor_id FK
+    varchar action
+    varchar target_type
+    char(36) target_id
     json diff_json "nullable"
     datetime created_at
   }
 
-  EMAIL_NOTIFICATION_LOGS {
-    uuid id PK
-    uuid group_id FK
-    uuid triggered_by_user_id FK
-    uuid to_user_id FK
-    uuid related_expense_id "nullable FK"
-    int amount_cents "nullable"
-    string status "QUEUED|SENT|FAILED"
-    string error_message "nullable"
+  MAIL_LOGS {
+    char(36) id PK
+    char(36) group_id FK
+    char(36) from_id FK
+    char(36) to_id FK
+    char(36) expense_id "nullable FK"
+    int amount_cents
+    enum status "QUEUED|SENT|FAILED"
+    text error_message "nullable"
     datetime sent_at "nullable"
     datetime created_at
   }
 
   USERS ||--o{ GROUPS : "owns"
-  USERS ||--o{ GROUP_MEMBERS : "joins"
-  GROUPS ||--o{ GROUP_MEMBERS : "has"
+  USERS ||--o{ MEMBERS : "joins"
+  GROUPS ||--o{ MEMBERS : "has"
 
   GROUPS ||--o{ EXPENSES : "has"
   USERS  ||--o{ EXPENSES : "paid_by"
   USERS  ||--o{ EXPENSES : "created_by"
 
-  EXPENSES ||--o{ EXPENSE_SPLITS : "split_into"
-  USERS    ||--o{ EXPENSE_SPLITS : "owes"
+  EXPENSES ||--o{ SPLITS : "split_into"
+  USERS    ||--o{ SPLITS : "owes"
 
-  EXPENSES ||--o{ EXPENSE_ATTACHMENTS : "has"
+  EXPENSES ||--o{ ATTACHMENTS : "has"
 
-  GROUPS ||--o{ AUDIT_LOGS : "records"
-  USERS  ||--o{ AUDIT_LOGS : "acts"
+  GROUPS ||--o{ AUDITS : "records"
+  USERS  ||--o{ AUDITS : "acts"
 
-  GROUPS ||--o{ EMAIL_NOTIFICATION_LOGS : "has"
-  USERS  ||--o{ EMAIL_NOTIFICATION_LOGS : "triggered_by"
-  USERS  ||--o{ EMAIL_NOTIFICATION_LOGS : "to_user"
-  EXPENSES ||--o{ EMAIL_NOTIFICATION_LOGS : "related_to"
+  GROUPS ||--o{ MAIL_LOGS : "has"
+  USERS  ||--o{ MAIL_LOGS : "from"
+  USERS  ||--o{ MAIL_LOGS : "to"
+  EXPENSES ||--o{ MAIL_LOGS : "related_to"
 ```
-## テーブル説明（重要）
+## テーブル説明（重要 / MySQL）
 
 ### USERS（ユーザー）
-**目的**：認証ユーザーのプロフィールと通知設定を保持する。
+**目的**：認証ユーザーのプロフィールと通知・UI設定を保持する（認証詳細は別Issueで追加する）。
 
 **主なカラム**
-- `external_uid`：認証基盤のユーザー識別子（JWT の `sub` など）
+- `external_uid`：認証基盤のユーザー識別子（JWT の `sub` など、UNIQUE）
 - `name`：表示名
 - `email`：メール連絡機能で使用（任意）
-- `email_verified`：メール認証済みかどうか
-- `email_notifications_enabled`：メール通知の受信可否
+- `notify_email`：メール連絡を受け取るか（任意。将来の通知ON/OFFの基礎）
+- `theme_mode`：UIテーマ設定（ダークモード切替）
+  - `SYSTEM | LIGHT | DARK`（デフォルト `SYSTEM`）
 
 **制約・ルール**
-- `external_uid` はユニーク
-- メール送信は `email` が存在するユーザーのみ可能
-- 運用方針により `email_verified = true` のみ送信許可とすることも可能
+- `external_uid` は必ずユニーク
+- メール送信は `email` が存在するユーザーのみ可能（認証・検証の要否は別Issueで決める）
+- 退会（論理削除）については要件確定後に `deleted_at` を追加する（YAGNI）
 
 **インデックス案**
 - `users(external_uid)` UNIQUE
-- `users(email)` UNIQUE（メールをログインに使う場合）
+- `users(email)`（必要なら UNIQUE。MVPでは運用判断）
 
 ---
 
@@ -155,36 +162,50 @@ erDiagram
 **目的**：旅行・飲み会・同棲など、精算対象となる単位。
 
 **主なカラム**
-- `owner_user_id`：グループ作成者（OWNER）
-- `invite_token`：招待リンク用トークン
+- `owner_id`：グループ作成者（OWNER）
+- `invite_token`：招待リンク用トークン（UNIQUE）
 - `currency`：通貨（将来拡張用、MVPでは JPY 固定）
 
 **制約・ルール**
-- グループ作成時に OWNER を `group_members` に必ず登録する
-- `invite_token` は外部公開されるため推測困難な値を使用
+- グループ作成時に OWNER を必ず `members` に登録する（role=OWNER, active=true）
+- `invite_token` は外部公開されるため、推測困難なランダム値を使用する
 
 **インデックス案**
-- `groups(owner_user_id)`
+- `groups(owner_id)`
 - `groups(invite_token)` UNIQUE
 
 ---
 
-### GROUP_MEMBERS（グループメンバー）
-**目的**：グループへの参加状態・ロール管理。途中参加・途中退出に対応。
+### MEMBERS（メンバー / 中間テーブル）
+**目的**：グループ所属（多対多）・ロール管理・途中参加/途中退出を表現する。
+
+MySQL では `left_at IS NULL` を条件にした部分ユニーク制約が弱いため、
+`active` フラグを追加し、途中参加/途中退出を表現する。
+
+ただし、`members(group_id, user_id, active)` UNIQUE は
+`active=false` の行も 1 件しか作れず、再参加などで不都合が出やすい。
+MVPでは **履歴を保持しない** 方針のため、`(group_id, user_id)` で **1 行に集約**して運用する。
 
 **主なカラム**
 - `role`：`OWNER | MEMBER`
-- `joined_at`：参加日時
-- `left_at`：退出日時（NULL の場合は在籍中）
+- `active`：在籍中フラグ（在籍中 `true` / 退出済み `false`）
+- `joined_at`：直近の参加日時（再参加時は更新）
+- `left_at`：直近の退出日時（在籍中は NULL）
 
 **制約・ルール**
-- 同一ユーザーが同一グループに在籍中のレコードは 1 件のみ
-- 再参加時は新しいレコードを作成する
-- OWNER は原則 1 名（必要に応じて複数可）
+- `(group_id, user_id)` は常に 1 レコードのみ
+- 在籍中メンバーは `active = true` とする
+- 退出処理は `active = false` と `left_at` を同一トランザクションで更新
+- 再参加時は新規レコードを作成せず、同一レコードを更新する
+  - `active = true`, `joined_at = NOW()`, `left_at = NULL`
 
 **インデックス案**
-- `group_members(group_id, user_id)`
-- `group_members(group_id, left_at)`
+- `members(group_id, user_id)` UNIQUE（重要）
+- `members(group_id)`（外部キーにより単体インデックスが作られる運用が多い）
+- `members(group_id, left_at)`（退出済みメンバーを絞り込む検索が必要になった場合に追加検討）
+
+※ `members(group_id, active)` は `active` のカーディナリティが低く、初期段階では効果が限定的なため不要。
+　パフォーマンス問題が顕在化したタイミングで追加を検討する。
 
 ---
 
@@ -192,44 +213,46 @@ erDiagram
 **目的**：立替支払いの元データ。清算・集計の基点となる。
 
 **主なカラム**
-- `paid_by_user_id`：実際に支払ったユーザー
-- `created_by_user_id`：入力したユーザー（代理入力を想定）
+- `paid_by_id`：実際に支払ったユーザー
+- `created_by_id`：入力したユーザー（代理入力を想定）
 - `amount_cents`：支払金額（整数）
+- `paid_on`：支払日（date）
 - `split_type`：割り方の種類
 - `deleted_at`：論理削除用
 
 **制約・ルール**
 - `amount_cents > 0`
-- 削除は物理削除せず論理削除
-- 清算の根拠は `expense_splits` に保存された値を使用する
+- 削除は物理削除せず、論理削除とする
+- 清算の根拠は `splits` に保存された確定値を使用する（清算提案はDBに持たない）
 
 **インデックス案**
-- `expenses(group_id, paid_at)`
+- `expenses(group_id, paid_on)`
 - `expenses(group_id, deleted_at)`
-- `expenses(paid_by_user_id)`
+- `expenses(paid_by_id)`
 
 ---
 
-### EXPENSE_SPLITS（支払い割り当て）
-**目的**：各ユーザーの負担額を確定保存する。
+### SPLITS（支払い割り当て）
+**目的**：各ユーザーの負担額を確定保存する（清算の根拠）。
 
 **主なカラム**
-- `share_cents`：ユーザーごとの負担金額
+- `share_cents`：ユーザーごとの負担金額（整数）
 - `share_percent`：割合指定時のみ使用（任意）
 
 **制約・ルール**
-- 1 つの支払いに対して、対象メンバー分のレコードを作成
-- `SUM(share_cents) = expenses.amount_cents` を必ず保証する
+- 1 つの支払いに対して、対象メンバー分のレコードを作成する
+- `SUM(share_cents) = expenses.amount_cents` を必ず保証する（サーバー側で確定）
 - `share_cents >= 0`
+- 同一支払い内で同一ユーザーの重複割当は禁止する（`expense_id, user_id` UNIQUE）
 
 **インデックス案**
-- `expense_splits(expense_id)`
-- `expense_splits(expense_id, user_id)` UNIQUE
+- `splits(expense_id)`
+- `splits(expense_id, user_id)` UNIQUE
 
 ---
 
-### EXPENSE_ATTACHMENTS（添付ファイル）
-**目的**：レシート画像などの添付情報を管理。
+### ATTACHMENTS（添付ファイル）
+**目的**：レシート画像などの添付ファイルのメタ情報を管理する。
 
 **主なカラム**
 - `file_key`：ストレージ（S3 等）上のキー
@@ -237,20 +260,20 @@ erDiagram
 - `byte_size`：ファイルサイズ
 
 **制約・ルール**
-- ファイル実体はストレージに保存
-- DB にはメタ情報のみを保持
-- 署名付き URL は都度生成する
+- ファイルの実体はストレージに保存する
+- DB にはメタ情報のみを保持する
+- 署名付き URL は都度生成し、DBには保存しない
 
 **インデックス案**
-- `expense_attachments(expense_id)`
+- `attachments(expense_id)`
 
 ---
 
-### AUDIT_LOGS（監査ログ）
+### AUDITS（監査ログ）
 **目的**：重要操作の履歴を保持し、トレーサビリティを確保する。
 
 **主なカラム**
-- `actor_user_id`：操作したユーザー
+- `actor_id`：操作したユーザー
 - `action`：操作内容（例：`expense.created`）
 - `target_type` / `target_id`：操作対象
 - `diff_json`：変更差分（任意）
@@ -260,29 +283,55 @@ erDiagram
 - 削除操作も必ずログに残す
 
 **インデックス案**
-- `audit_logs(group_id, created_at)`
-- `audit_logs(actor_user_id, created_at)`
-- `audit_logs(target_type, target_id)`
+- `audits(group_id, created_at)`
+- `audits(actor_id, created_at)`
+- `audits(target_type, target_id)`
 
 ---
 
-### EMAIL_NOTIFICATION_LOGS（メール送信履歴）
-**目的**：清算金額連絡メールの送信履歴と状態管理。
+### MAIL_LOGS（メール送信履歴）
+**目的**：清算金額連絡メールの送信履歴と状態管理を行う。
 
 **主なカラム**
-- `triggered_by_user_id`：送信操作を行ったユーザー
-- `to_user_id`：送信先ユーザー
+- `from_id`：送信操作を行ったユーザー
+- `to_id`：送信先ユーザー
+- `expense_id`：特定支払いに紐づく場合のみ使用（任意）
 - `amount_cents`：送信した金額
 - `status`：`QUEUED | SENT | FAILED`
 - `error_message`：失敗理由（任意）
-- `related_expense_id`：特定支払いに紐づく場合のみ使用
 
 **制約・ルール**
-- メール未登録ユーザーには送信不可
+- メール未登録ユーザーには送信不可（UI でも対象外とする）
 - 送信前に必ず確認画面を表示する
 - 失敗時は再送可能とする
 
 **インデックス案**
-- `email_notification_logs(group_id, created_at)`
-- `email_notification_logs(to_user_id, created_at)`
-- `email_notification_logs(status, created_at)`
+- `mail_logs(group_id, created_at)`
+- `mail_logs(to_id, created_at)`
+- `mail_logs(status, created_at)`
+
+---
+
+## MySQL向け実装メモ（重要）
+
+- UUID は初期実装では可読性・実装安全性を優先し `CHAR(36)` を使用する。
+  以下の条件が明確になったタイミングで `BINARY(16)` への移行を検討する：
+  - テーブル行数が数百万件規模に増加した
+  - UUID を含む JOIN / INDEX がボトルネックになった
+  - `EXPLAIN` の結果からインデックスサイズや比較コストが問題になった
+  - パフォーマンス改善が事業要件として求められるようになった
+  それまでは過度な最適化を避け、保守性・デバッグ性を優先する。
+
+- インデックスは **必要最小限から始める**
+  インデックスが増えるほど更新・書き込み時のコストは確実に上がるため、
+  初期段階では必要最小限に絞り、必要になったら追加する方針とする。
+
+- `members` テーブルは（MVPでは）**履歴を保持しない設計**とする
+  - `(group_id, user_id)` を UNIQUE にする
+  - 参加時：`active=true`, `joined_at=NOW()`, `left_at=NULL` に更新（UPSERT 推奨）
+  - 退出時：`active=false`, `left_at=NOW()` を同一トランザクションで更新する
+  - `members(group_id, active)` は初期は貼らず、必要になったら追加を検討する
+
+- `splits` の合計金額が `expenses.amount_cents` と一致することは
+  DB 制約ではなく、アプリケーション側のトランザクション処理で保証する。
+  - 支払い登録時に割当を確定させ、以降は不整合を起こさない設計とする
