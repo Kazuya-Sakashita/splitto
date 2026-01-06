@@ -1,0 +1,68 @@
+services:
+  db:
+    image: mysql:8.4
+    command:
+      - --default-time-zone=+00:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      TZ: UTC
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: app_development
+      MYSQL_USER: app
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      TZ: UTC
+      RAILS_ENV: development
+      DATABASE_HOST: db
+      DATABASE_NAME: app_development
+      DATABASE_USER: app
+      DATABASE_PASSWORD: password
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - bundle-cache:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+    command: bash -lc "rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3000"
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      TZ: UTC
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+    ports:
+      - "8000:3000"
+    volumes:
+      - ./frontend:/app
+      - node-modules:/app/node_modules
+    depends_on:
+      - api
+    command: bash -lc "npm install && npm run dev -- -p 3000 -H 0.0.0.0"
+
+volumes:
+  db-data:
+  bundle-cache:
+  node-modules:
