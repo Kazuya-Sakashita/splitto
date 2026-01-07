@@ -11,6 +11,7 @@
     "format:check": "prettier \"src/**/*.{ts,tsx,js,jsx,json,css,md}\" --check"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.36.6",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
