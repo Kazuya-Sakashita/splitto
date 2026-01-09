@@ -1,65 +1,168 @@
-import Image from "next/image"
+import Link from "next/link"
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="mx-auto max-w-6xl px-6 py-12">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-linear-to-br from-emerald-400 to-teal-300 shadow-[0_0_0_1px_rgba(255,255,255,0.10)]" />
+          <div>
+            <p className="text-sm font-semibold tracking-wide">Splitto</p>
+            <p className="text-xs text-white/60">割り勘・立替精算を、もっとシンプルに。</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <SignedOut>
+            <Link
+              href="/sign-in"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+            >
+              ログイン
+            </Link>
+            <Link
+              href="/sign-up"
+              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-emerald-400"
+            >
+              新規登録
+            </Link>
+          </SignedOut>
+
+          <SignedIn>
+            <Link
+              href="/dashboard"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+            >
+              ダッシュボード
+            </Link>
+            <UserButton />
+          </SignedIn>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <main className="mt-14 grid gap-10 lg:grid-cols-2 lg:items-center">
+        <section>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">
+            Modern Green UI
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-200">
+              splitto
+            </span>
+          </div>
+
+          <h1 className="mt-5 text-4xl font-semibold leading-tight lg:text-5xl">
+            精算のモヤモヤを、
+            <span className="block bg-linear-to-r from-emerald-300 via-teal-200 to-lime-200 bg-clip-text text-transparent">
+              透明に、スマートに。
+            </span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70">
+            旅行・飲み会・家計の立替など、面倒な計算をまとめて管理。
+            誰がいくら払うかを整理して、スムーズに精算できます。
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+          <div className="mt-7 flex flex-wrap gap-3">
+            <SignedOut>
+              <Link
+                href="/sign-up"
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-emerald-400"
+              >
+                無料ではじめる
+              </Link>
+              <Link
+                href="/sign-in"
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white hover:bg-white/10"
+              >
+                ログイン
+              </Link>
+            </SignedOut>
+
+            <SignedIn>
+              <Link
+                href="/dashboard"
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-neutral-950 hover:bg-emerald-400"
+              >
+                ダッシュボードへ
+              </Link>
+            </SignedIn>
+          </div>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              { title: "立替を記録", desc: "支払いをサクッと登録" },
+              { title: "自動で整理", desc: "支払う人を明確に" },
+              { title: "履歴で安心", desc: "あとから見返せる" },
+            ].map((f) => (
+              <div
+                key={f.title}
+                className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur"
+              >
+                <p className="text-sm font-semibold">{f.title}</p>
+                <p className="mt-1 text-xs text-white/60">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Right card */}
+        <section className="mx-auto w-full max-w-lg">
+          <div className="rounded-3xl border border-white/10 bg-white/6 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur">
+            <div className="rounded-2xl bg-linear-to-br from-emerald-500/20 via-teal-400/10 to-lime-300/10 p-5">
+              <p className="text-sm font-semibold">サンプル：精算のイメージ</p>
+              <p className="mt-1 text-xs text-white/60">
+                あとでダッシュボード実装に合わせて置き換え予定でOK
+              </p>
+
+              <div className="mt-5 space-y-3 text-sm">
+                <Row label="合計" value="¥12,300" />
+                <Row label="あなた" value="¥3,200" />
+                <Row label="未精算" value="¥1,800" accent />
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button className="flex-1 rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-emerald-400">
+                  立替を追加
+                </button>
+                <button className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10">
+                  メンバーを見る
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-white/50">
+            © Splitto — Modern Green UI
+          </p>
+        </section>
       </main>
+    </div>
+  )
+}
+
+function Row({
+  label,
+  value,
+  accent,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      <span className="text-white/70">{label}</span>
+      <span
+        className={
+          accent
+            ? "font-semibold text-emerald-200"
+            : "font-semibold text-white"
+        }
+      >
+        {value}
+      </span>
     </div>
   )
 }
