@@ -1,6 +1,9 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { DashboardHeaderActions } from "./_components/DashboardHeaderActions"
+import { GlassCard } from "@/components/ui/GlassCard"
+import { InfoRow } from "@/components/ui/InfoRow"
+import { Badge } from "@/components/ui/Badge"
 
 export default async function DashboardPage() {
   const user = await currentUser()
@@ -17,11 +20,9 @@ export default async function DashboardPage() {
       {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">
-            Splitto Dashboard
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-200">
-              signed in
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge>Splitto Dashboard</Badge>
+            <Badge tone="emerald">signed in</Badge>
           </div>
 
           <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -57,25 +58,6 @@ export default async function DashboardPage() {
           </div>
         </GlassCard>
       </main>
-    </div>
-  )
-}
-
-/* ----------------------------- UI Parts ------------------------------ */
-
-function GlassCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/6 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur">
-      {children}
-    </div>
-  )
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-      <span className="text-sm text-white/70">{label}</span>
-      <span className="text-sm font-semibold text-white">{value}</span>
     </div>
   )
 }
