@@ -1,0 +1,13 @@
+.next
+.next/**
+node_modules
+node_modules/**
+out
+out/**
+.turbo
+.turbo/**
+coverage
+coverage/**
+build
+build/**
+*.log
