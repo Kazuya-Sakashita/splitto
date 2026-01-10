@@ -3,6 +3,8 @@ import { SignedIn, SignedOut } from "@clerk/nextjs"
 import { SiteHeader } from "./_components/layout/SiteHeader"
 import { PreviewCard } from "./_components/home/PreviewCard"
 import { HOME_FEATURES } from "./_constants/home"
+import { Badge } from "@/components/ui/Badge"
+import { GlassCard } from "@/components/ui/GlassCard"
 
 export default function PublicHomePage() {
   return (
@@ -11,11 +13,10 @@ export default function PublicHomePage() {
 
       <main className="mt-14 grid gap-10 lg:grid-cols-2 lg:items-center">
         <section>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">
-            Modern Green UI
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-200">
-              splitto
-            </span>
+          {/* Badge */}
+          <div className="flex items-center gap-2">
+            <Badge>Modern Green UI</Badge>
+            <Badge tone="emerald">splitto</Badge>
           </div>
 
           <h1 className="mt-5 text-4xl font-semibold leading-tight lg:text-5xl">
@@ -30,6 +31,7 @@ export default function PublicHomePage() {
             誰がいくら払うかを整理して、スムーズに精算できます。
           </p>
 
+          {/* CTA */}
           <div className="mt-7 flex flex-wrap gap-3">
             <SignedOut>
               <Link
@@ -56,15 +58,13 @@ export default function PublicHomePage() {
             </SignedIn>
           </div>
 
+          {/* Features */}
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {HOME_FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-2xl border border-white/10 bg-white/6 p-4 backdrop-blur"
-              >
+              <GlassCard key={f.title} className="p-4">
                 <p className="text-sm font-semibold">{f.title}</p>
                 <p className="mt-1 text-xs text-white/60">{f.desc}</p>
-              </div>
+              </GlassCard>
             ))}
           </div>
         </section>
