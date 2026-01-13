@@ -4,6 +4,7 @@ import { DashboardHeaderActions } from "./_components/DashboardHeaderActions"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { InfoRow } from "@/components/ui/InfoRow"
 import { Badge } from "@/components/ui/Badge"
+import { MeDebugButton } from "./_components/MeDebugButton"
 
 export default async function DashboardPage() {
   const user = await currentUser()
@@ -56,6 +57,9 @@ export default async function DashboardPage() {
             <InfoRow label="Name" value={name} />
             <InfoRow label="Email" value={primaryEmail} />
           </div>
+
+          {/* --- 一時デバッグ用: Rails保護エンドポイントをJWT付きで叩く --- */}
+          <MeDebugButton />
         </GlassCard>
       </main>
     </div>
