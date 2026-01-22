@@ -3,84 +3,118 @@
 require "rails_helper"
 
 RSpec.describe "GET /api/v1/me", type: :request do
+  subject(:do_request) { get path, headers: headers }
+
   let(:path) { "/api/v1/me" }
-  let(:headers) { { "Authorization" => "Bearer dummy" } }
+  let(:headers) { {} }
+  let(:token) { "dummy" }
 
-  # ✅ デフォルトは verify! を成功扱いにして外部依存（JWT decode / JWKS fetch）を排除
-  #    失敗ケースだけ各 example で上書きする
-  before do
-    allow(Clerk::JwtVerifier).to receive(:verify!).and_return(
-      { "sub" => "default_sub", "azp" => "http://localhost:8000" }
-    )
-  end
+  let(:payload) { { "sub" => sub, "azp" => azp } }
+  let(:sub) { "default_sub" }
+  let(:azp) { "http://localhost:8000" }
 
-  def stub_verify!(payload:)
-    allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
-  end
+  describe "認証" do
+    context "Authorization ヘッダーが無いとき" do
+      it "401 missing_token を返す" do
+        do_request
 
-  def stub_verify_error!(message: "bad token")
-    allow(Clerk::JwtVerifier).to receive(:verify!)
-      .and_raise(Clerk::JwtVerifier::VerificationError.new(message))
-  end
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.parsed_body).to include(
+          "error" => "Unauthorized",
+          "reason" => "missing_token"
+        )
+      end
 
-  it "Authorization が無いと 401 missing_token" do
-    get path
+      it "Clerk::JwtVerifier.verify! を呼ばない" do
+        allow(Clerk::JwtVerifier).to receive(:verify!)
 
-    expect(response).to have_http_status(:unauthorized)
-    expect(response.parsed_body).to include(
-      "error" => "Unauthorized",
-      "reason" => "missing_token"
-    )
-  end
+        do_request
 
-  it "Bearer 形式でないと 401 missing_token" do
-    get path, headers: { "Authorization" => "Token abc" }
+        expect(Clerk::JwtVerifier).not_to have_received(:verify!)
+      end
+    end
 
-    expect(response).to have_http_status(:unauthorized)
-    expect(response.parsed_body).to include("reason" => "missing_token")
-  end
+    context "Authorization が Bearer 形式でないとき" do
+      let(:headers) { { "Authorization" => "Token abc" } }
 
-  it "verify! が失敗すると 401 invalid_token" do
-    stub_verify_error!(message: "decode failed")
+      it "401 missing_token を返す" do
+        do_request
 
-    get path, headers: headers
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.parsed_body).to include("reason" => "missing_token")
+      end
 
-    expect(response).to have_http_status(:unauthorized)
-    expect(response.parsed_body).to include("reason" => "invalid_token")
-  end
+      it "Clerk::JwtVerifier.verify! を呼ばない" do
+        allow(Clerk::JwtVerifier).to receive(:verify!)
 
-  it "azp 不一致などで verify! が失敗すると 401 invalid_token" do
-    # ✅ azp チェックは JwtVerifier 側の責務（invalid azp でも verify! は例外になる）
-    stub_verify_error!(message: "invalid azp")
+        do_request
 
-    get path, headers: headers
+        expect(Clerk::JwtVerifier).not_to have_received(:verify!)
+      end
+    end
 
-    expect(response).to have_http_status(:unauthorized)
-    expect(response.parsed_body).to include("reason" => "invalid_token")
-  end
+    context "Authorization が Bearer 形式のとき" do
+      let(:headers) { { "Authorization" => "Bearer #{token}" } }
 
-  it "認証成功で user を作成/取得できる" do
-    stub_verify!(payload: { "sub" => "user_abc", "azp" => "http://localhost:8000" })
+      before do
+        allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
+      end
 
-    expect { get path, headers: headers }
-      .to change(User, :count).by(1)
+      context "verify! が失敗するとき" do
+        before do
+          allow(Clerk::JwtVerifier).to receive(:verify!)
+            .and_raise(Clerk::JwtVerifier::VerificationError.new("decode failed"))
+        end
 
-    expect(response).to have_http_status(:ok)
-    expect(User.find_by(external_uid: "user_abc")).to be_present
-  end
+        it "401 invalid_token を返す" do
+          do_request
 
-  it "同じ sub で2回呼ぶと user は増えない（重複作成しない）" do
-    stub_verify!(payload: { "sub" => "user_same", "azp" => "http://localhost:8000" })
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.parsed_body).to include("reason" => "invalid_token")
+        end
+      end
 
-    expect { get path, headers: headers }
-      .to change(User, :count).by(1)
+      context "azp 不一致などで verify! が失敗するとき" do
+        before do
+          allow(Clerk::JwtVerifier).to receive(:verify!)
+            .and_raise(Clerk::JwtVerifier::VerificationError.new("invalid azp"))
+        end
 
-    created_user = User.find_by!(external_uid: "user_same")
+        it "401 invalid_token を返す" do
+          do_request
 
-    expect { get path, headers: headers }
-      .not_to change(User, :count)
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.parsed_body).to include("reason" => "invalid_token")
+        end
+      end
 
-    expect(User.where(external_uid: "user_same").count).to eq(1)
-    expect(User.find_by!(external_uid: "user_same").id).to eq(created_user.id)
+      context "verify! が成功するとき" do
+        context "User がまだ存在しないとき" do
+          let(:sub) { "user_abc" }
+
+          it "User を作成し 200 を返す" do
+            expect { do_request }.to change(User, :count).by(1)
+
+            expect(response).to have_http_status(:ok)
+            expect(User.find_by(external_uid: sub)).to be_present
+          end
+        end
+
+        context "同じ sub の User が既に存在するとき" do
+          let(:sub) { "user_same" }
+
+          # ここは「事前に必ず存在していてほしい」ので let! が自然
+          let!(:existing_user) { User.create!(external_uid: sub) }
+
+          it "重複作成せず 200 を返す" do
+            expect { do_request }.not_to change(User, :count)
+
+            expect(response).to have_http_status(:ok)
+            expect(User.where(external_uid: sub).count).to eq(1)
+            expect(User.find_by!(external_uid: sub).id).to eq(existing_user.id)
+          end
+        end
+      end
+    end
   end
 end
