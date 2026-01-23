@@ -19,8 +19,11 @@ RSpec.describe "GET /api/v1/me", type: :request do
         do_request
 
         expect(response).to have_http_status(:unauthorized)
+        expect(response.media_type).to eq("application/problem+json")
+
         expect(response.parsed_body).to include(
-          "error" => "Unauthorized",
+          "title" => "Unauthorized",
+          "status" => 401,
           "reason" => "missing_token"
         )
       end

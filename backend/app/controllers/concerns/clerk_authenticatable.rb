@@ -36,7 +36,20 @@ module ClerkAuthenticatable
     token.presence
   end
 
-  def render_unauthorized(reason, extra = {})
-    render json: { error: "Unauthorized", reason:, **extra }, status: :unauthorized
+  def render_unauthorized(reason, detail: nil, type: nil, instance: nil, **ext)
+    status = :unauthorized
+
+    problem = {
+      type: type || "about:blank",
+      title: "Unauthorized",
+      status: Rack::Utils.status_code(status),
+      detail: detail || "Authentication failed",
+      reason: reason,
+      **ext
+    }
+    problem[:instance] = instance if instance.present?
+
+    render json: problem, status: status, content_type: "application/problem+json"
   end
+
 end
