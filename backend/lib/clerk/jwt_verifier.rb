@@ -18,18 +18,15 @@ module Clerk
         new(**options).verify!(token)
       end
 
-      # ENV 由来の authorized_parties を共通化（余計な空白や空要素は除去）
-      def env_authorized_parties
+      # ENV の生文字列（あくまで "raw" を返す）
+      def env_authorized_parties_raw
         ENV["CLERK_AUTHORIZED_PARTIES"].to_s
-          .split(",")
-          .map(&:strip)
-          .reject(&:empty?)
       end
     end
 
     def initialize(
       jwks_url: ENV.fetch("CLERK_JWKS_URL"),
-      authorized_parties: self.class.env_authorized_parties,
+      authorized_parties: self.class.env_authorized_parties_raw,
       cache: Rails.cache,
       cache_key: DEFAULT_JWKS_CACHE_KEY,
       cache_ttl: DEFAULT_JWKS_CACHE_TTL,
@@ -70,7 +67,6 @@ module Clerk
         Array(value).map(&:to_s).map(&:strip).reject(&:empty?)
       end
     end
-
 
     # authorized_parties を設定している場合のみ azp を検証する
     def validate_azp!(payload)
