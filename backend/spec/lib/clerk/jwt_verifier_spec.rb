@@ -8,6 +8,9 @@ RSpec.describe Clerk::JwtVerifier do
   let(:jwks_url) { "https://example.test/.well-known/jwks.json" }
   let(:jwks_uri) { URI.parse(jwks_url) }
 
+  # ベタ書きは 1 箇所に寄せる（テストデータ）
+  let(:frontend_origin) { "http://localhost:8000" }
+
   let(:authorized_parties) { [] }
 
   let(:http_client) { class_double(Net::HTTP) }
@@ -47,8 +50,26 @@ RSpec.describe Clerk::JwtVerifier do
 
     let(:token) { "dummy" }
 
-    context "token が nil/空/空白のとき" do
+    context "token が nil のとき" do
+      let(:token) { nil }
+
+      it "VerificationError（missing token）を投げる" do
+        expect { call_verify! }
+          .to raise_error(described_class::VerificationError, /\Amissing token\z/)
+      end
+    end
+
+    context "token が空文字のとき" do
       let(:token) { "" }
+
+      it "VerificationError（missing token）を投げる" do
+        expect { call_verify! }
+          .to raise_error(described_class::VerificationError, /\Amissing token\z/)
+      end
+    end
+
+    context "token が空白だけのとき" do
+      let(:token) { "   " }
 
       it "VerificationError（missing token）を投げる" do
         expect { call_verify! }
@@ -69,7 +90,7 @@ RSpec.describe Clerk::JwtVerifier do
     end
 
     context "JWT.decode が成功するとき" do
-      let(:azp) { "http://localhost:8000" }
+      let(:azp) { frontend_origin }
       let(:payload) { { "sub" => "user_1", "azp" => azp } }
 
       before do
@@ -86,7 +107,7 @@ RSpec.describe Clerk::JwtVerifier do
       end
 
       context "authorized_parties が存在するとき" do
-        let(:authorized_parties) { ["http://localhost:8000"] }
+        let(:authorized_parties) { [frontend_origin] }
 
         context "payload に azp が無いとき" do
           let(:payload) { { "sub" => "user_1" } }
@@ -107,7 +128,7 @@ RSpec.describe Clerk::JwtVerifier do
         end
 
         context "azp が一致するとき" do
-          let(:azp) { "http://localhost:8000" }
+          let(:azp) { frontend_origin }
 
           it "payload を返す" do
             expect(call_verify!).to include("sub" => "user_1")
@@ -117,7 +138,7 @@ RSpec.describe Clerk::JwtVerifier do
 
       context "authorized_parties の正規化" do
         context "authorized_parties が文字列（単体URL）のとき" do
-          let(:authorized_parties) { "http://localhost:8000" }
+          let(:authorized_parties) { frontend_origin }
 
           it "許可リストとして扱える" do
             expect(call_verify!).to include("sub" => "user_1")
@@ -125,10 +146,10 @@ RSpec.describe Clerk::JwtVerifier do
         end
 
         context "authorized_parties がカンマ区切り文字列のとき" do
-          let(:authorized_parties) { "http://localhost:8000, http://localhost:9000" }
+          let(:authorized_parties) { "#{frontend_origin}, http://localhost:9000" }
           let(:azp) { "http://localhost:9000" }
 
-          it "（仕様にするなら）許可リストとして扱える" do
+          it "許可リストとして扱える" do
             expect(call_verify!).to include("sub" => "user_1")
           end
         end

@@ -9,9 +9,13 @@ RSpec.describe "GET /api/v1/me", type: :request do
   let(:headers) { {} }
   let(:token) { "dummy" }
 
+  # 運用で変わる可能性があるので ENV を優先しつつ、spec が環境に依存しないよう default を持つ
+  let(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
+
+  # テストデータとして azp を作る（= 許可 origin を前提にする）
   let(:payload) { { "sub" => sub, "azp" => azp } }
   let(:sub) { "default_sub" }
-  let(:azp) { "http://localhost:8000" }
+  let(:azp) { allowed_origin }
 
   describe "認証" do
     context "Authorization ヘッダーが無いとき" do
@@ -20,7 +24,6 @@ RSpec.describe "GET /api/v1/me", type: :request do
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.media_type).to eq("application/problem+json")
-
         expect(response.parsed_body).to include(
           "title" => "Unauthorized",
           "status" => 401,
@@ -105,8 +108,6 @@ RSpec.describe "GET /api/v1/me", type: :request do
 
         context "同じ sub の User が既に存在するとき" do
           let(:sub) { "user_same" }
-
-          # ここは「事前に必ず存在していてほしい」ので let! が自然
           let!(:existing_user) { User.create!(external_uid: sub) }
 
           it "重複作成せず 200 を返す" do
