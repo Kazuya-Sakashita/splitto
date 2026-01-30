@@ -3,20 +3,17 @@
 require "rails_helper"
 
 RSpec.describe "GET /api/v1/me", type: :request do
-  subject(:do_request) { get path, headers: headers }
-
-  let(:path) { "/api/v1/me" }
+  subject(:do_request) { get "/api/v1/me", headers: headers }
 
   describe "認証" do
     describe "正常系" do
       context "Authorization が Bearer 形式で、verify! が成功するとき" do
-        let(:token) { "dummy" }
-        let(:headers) { { "Authorization" => "Bearer #{token}" } }
-        let(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
-
         context "User がまだ存在しないとき" do
-          let(:sub) { "user_abc" }
-          let(:payload) { { "sub" => sub, "azp" => allowed_origin } }
+          let!(:token) { "dummy" }
+          let!(:headers) { { "Authorization" => "Bearer #{token}" } }
+          let!(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
+          let!(:sub) { "user_abc" }
+          let!(:payload) { { "sub" => sub, "azp" => allowed_origin } }
 
           before do
             allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
@@ -31,11 +28,14 @@ RSpec.describe "GET /api/v1/me", type: :request do
         end
 
         context "同じ sub の User が既に存在するとき" do
-          let(:sub) { "user_same" }
-          let(:payload) { { "sub" => sub, "azp" => allowed_origin } }
+          let!(:token) { "dummy" }
+          let!(:headers) { { "Authorization" => "Bearer #{token}" } }
+          let!(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
+          let!(:sub) { "user_same" }
+          let!(:payload) { { "sub" => sub, "azp" => allowed_origin } }
+          let!(:existing_user) { User.create!(external_uid: sub) }
 
           before do
-            User.create!(external_uid: sub)
             allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
           end
 
@@ -44,7 +44,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
 
             expect(response).to have_http_status(:ok)
             expect(User.where(external_uid: sub).count).to eq(1)
-            expect(User.find_by!(external_uid: sub)).to be_present
+            expect(User.find_by!(external_uid: sub).id).to eq(existing_user.id)
           end
         end
       end
@@ -52,7 +52,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
 
     describe "異常系" do
       context "Authorization ヘッダーが無いとき" do
-        let(:headers) { {} }
+        let!(:headers) { {} }
 
         before do
           allow(Clerk::JwtVerifier).to receive(:verify!)
@@ -78,7 +78,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
       end
 
       context "Authorization が Bearer 形式でないとき" do
-        let(:headers) { { "Authorization" => "Token abc" } }
+        let!(:headers) { { "Authorization" => "Token abc" } }
 
         before do
           allow(Clerk::JwtVerifier).to receive(:verify!)
@@ -104,8 +104,8 @@ RSpec.describe "GET /api/v1/me", type: :request do
       end
 
       context "Authorization が Bearer 形式で、verify! が失敗するとき" do
-        let(:token) { "dummy" }
-        let(:headers) { { "Authorization" => "Bearer #{token}" } }
+        let!(:token) { "dummy" }
+        let!(:headers) { { "Authorization" => "Bearer #{token}" } }
 
         before do
           allow(Clerk::JwtVerifier).to receive(:verify!)
@@ -126,8 +126,8 @@ RSpec.describe "GET /api/v1/me", type: :request do
       end
 
       context "Authorization が Bearer 形式で、azp 不一致などで verify! が失敗するとき" do
-        let(:token) { "dummy" }
-        let(:headers) { { "Authorization" => "Bearer #{token}" } }
+        let!(:token) { "dummy" }
+        let!(:headers) { { "Authorization" => "Bearer #{token}" } }
 
         before do
           allow(Clerk::JwtVerifier).to receive(:verify!)
