@@ -1,0 +1,1170 @@
+openapi: 3.0.3
+info:
+  title: Splitto API
+  version: 0.1.0
+  description: >
+    Splitto（割り勘・立替精算）API仕様（MVP）
+  license:
+    name: UNLICENSED
+
+servers:
+  - url: https://api.splitto.example.com
+    description: Production (placeholder)
+  - url: http://localhost:3000
+    description: Rails API (local)
+
+tags:
+  - name: Auth
+    description: 認証・ログインユーザー関連
+  - name: Users
+    description: ユーザー情報
+  - name: Groups
+    description: グループ管理
+  - name: Members
+    description: グループメンバー管理
+  - name: Expenses
+    description: 支払い（立替）管理
+  - name: Attachments
+    description: 添付ファイル
+  - name: Audits
+    description: 監査ログ
+  - name: MailLogs
+    description: メール送信履歴
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/v1/me:
+    get:
+      operationId: getMe
+      tags:
+        - Auth
+      summary: ログインユーザー情報の取得
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/users/{userId}:
+    get:
+      operationId: getUserById
+      tags:
+        - Users
+      summary: ユーザー取得（ID）
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups:
+    get:
+      operationId: listGroups
+      tags:
+        - Groups
+      summary: グループ一覧
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: createGroup
+      tags:
+        - Groups
+      summary: グループ作成
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/groups/{groupId}:
+    get:
+      operationId: getGroup
+      tags:
+        - Groups
+      summary: グループ詳細
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateGroup
+      tags:
+        - Groups
+      summary: グループ更新
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupUpdateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/members:
+    get:
+      operationId: listMembers
+      tags:
+        - Members
+      summary: メンバー一覧
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: true=在籍中のみ / false=退出済みのみ / 未指定=全件
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      operationId: addMember
+      tags:
+        - Members
+      summary: メンバー追加（招待/参加）
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberAddRequest"
+      responses:
+        "201":
+          description: Created / Re-joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/v1/groups/{groupId}/members/{memberId}/leave:
+    post:
+      operationId: leaveMember
+      tags:
+        - Members
+      summary: 退出（active=false, left_at=now）
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/MemberId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/expenses:
+    get:
+      operationId: listExpenses
+      tags:
+        - Expenses
+      summary: 支払い一覧
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: paid_on_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: paid_on_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: paid_by_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: include_deleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    post:
+      operationId: createExpense
+      tags:
+        - Expenses
+      summary: 支払い作成（splitsを確定保存）
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/expenses/{expenseId}:
+    get:
+      operationId: getExpense
+      tags:
+        - Expenses
+      summary: 支払い詳細
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/ExpenseId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateExpense
+      tags:
+        - Expenses
+      summary: 支払い更新（MVP）
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/ExpenseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteExpense
+      tags:
+        - Expenses
+      summary: 支払い削除（論理削除）
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/ExpenseId"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/expenses/{expenseId}/attachments:
+    post:
+      operationId: createAttachment
+      tags:
+        - Attachments
+      summary: 添付ファイルメタ情報の登録
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/ExpenseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachmentCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/audits:
+    get:
+      operationId: listAudits
+      tags:
+        - Audits
+      summary: 監査ログ一覧
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/groups/{groupId}/mail_logs:
+    get:
+      operationId: listMailLogs
+      tags:
+        - MailLogs
+      summary: メール送信履歴一覧
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/MailLogStatus"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MailLogListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PerPage:
+      name: per_page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ExpenseId:
+      name: expenseId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: bad_request
+            message:
+              type: string
+              example: invalid parameter
+            details:
+              type: array
+              items:
+                type: string
+
+    ThemeMode:
+      type: string
+      enum:
+        - SYSTEM
+        - LIGHT
+        - DARK
+
+    MemberRole:
+      type: string
+      enum:
+        - OWNER
+        - MEMBER
+
+    SplitType:
+      type: string
+      enum:
+        - EQUAL_ALL
+        - EQUAL_SELECTED
+        - AMOUNT
+        - PERCENT
+
+    MailLogStatus:
+      type: string
+      enum:
+        - QUEUED
+        - SENT
+        - FAILED
+    User:
+      type: object
+      required:
+        - id
+        - external_uid
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        external_uid:
+          type: string
+
+        # /me で「未設定のまま返る」可能性があるので nullable にする
+        name:
+          type: string
+          nullable: true
+
+        email:
+          type: string
+          nullable: true
+
+        # 未設定のまま返る可能性があるなら nullable: true にする
+        notify_email:
+          type: boolean
+          nullable: true
+          default: true
+
+        # $ref のままだと nullable を直接付けられないので allOf で包む
+        theme_mode:
+          allOf:
+            - $ref: "#/components/schemas/ThemeMode"
+          nullable: true
+
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserResponse:
+      type: object
+      required:
+        - user
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    Group:
+      type: object
+      required:
+        - id
+        - name
+        - owner_id
+        - currency
+        - invite_token
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        owner_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          example: JPY
+        invite_token:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    GroupCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        currency:
+          type: string
+          example: JPY
+
+    GroupUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        currency:
+          type: string
+
+    GroupResponse:
+      type: object
+      required:
+        - group
+      properties:
+        group:
+          $ref: "#/components/schemas/Group"
+
+    GroupListResponse:
+      type: object
+      required:
+        - groups
+        - meta
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    Member:
+      type: object
+      required:
+        - id
+        - group_id
+        - user_id
+        - role
+        - active
+        - joined_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/MemberRole"
+        active:
+          type: boolean
+          default: true
+        joined_at:
+          type: string
+          format: date-time
+        left_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MemberAddRequest:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/MemberRole"
+
+    MemberResponse:
+      type: object
+      required:
+        - member
+      properties:
+        member:
+          $ref: "#/components/schemas/Member"
+
+    MemberListResponse:
+      type: object
+      required:
+        - members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+
+    Expense:
+      type: object
+      required:
+        - id
+        - group_id
+        - paid_by_id
+        - created_by_id
+        - amount_cents
+        - paid_on
+        - split_type
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        paid_by_id:
+          type: string
+          format: uuid
+        created_by_id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+          minimum: 1
+        paid_on:
+          type: string
+          format: date
+        category:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        split_type:
+          $ref: "#/components/schemas/SplitType"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Split:
+      type: object
+      required:
+        - id
+        - expense_id
+        - user_id
+        - share_cents
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        expense_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        share_cents:
+          type: integer
+          minimum: 0
+        share_percent:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SplitCreateItem:
+      type: object
+      required:
+        - user_id
+        - share_cents
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        share_cents:
+          type: integer
+          minimum: 0
+        share_percent:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+
+    ExpenseCreateRequest:
+      type: object
+      required:
+        - paid_by_id
+        - created_by_id
+        - amount_cents
+        - paid_on
+        - split_type
+        - splits
+      properties:
+        paid_by_id:
+          type: string
+          format: uuid
+        created_by_id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+          minimum: 1
+        paid_on:
+          type: string
+          format: date
+        category:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        split_type:
+          $ref: "#/components/schemas/SplitType"
+        splits:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/SplitCreateItem"
+
+    ExpenseUpdateRequest:
+      type: object
+      properties:
+        paid_on:
+          type: string
+          format: date
+        category:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+
+    ExpenseResponse:
+      type: object
+      required:
+        - expense
+        - splits
+        - attachments
+      properties:
+        expense:
+          $ref: "#/components/schemas/Expense"
+        splits:
+          type: array
+          items:
+            $ref: "#/components/schemas/Split"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+
+    ExpenseListResponse:
+      type: object
+      required:
+        - expenses
+        - meta
+      properties:
+        expenses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Expense"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    Attachment:
+      type: object
+      required:
+        - id
+        - expense_id
+        - file_key
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        expense_id:
+          type: string
+          format: uuid
+        file_key:
+          type: string
+        content_type:
+          type: string
+          nullable: true
+        byte_size:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AttachmentCreateRequest:
+      type: object
+      required:
+        - file_key
+      properties:
+        file_key:
+          type: string
+        content_type:
+          type: string
+          nullable: true
+        byte_size:
+          type: integer
+          nullable: true
+
+    AttachmentResponse:
+      type: object
+      required:
+        - attachment
+      properties:
+        attachment:
+          $ref: "#/components/schemas/Attachment"
+
+    Audit:
+      type: object
+      required:
+        - id
+        - actor_id
+        - action
+        - target_type
+        - target_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+        actor_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+          example: expense.created
+        target_type:
+          type: string
+          example: Expense
+        target_id:
+          type: string
+          format: uuid
+        diff_json:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    AuditListResponse:
+      type: object
+      required:
+        - audits
+        - meta
+      properties:
+        audits:
+          type: array
+          items:
+            $ref: "#/components/schemas/Audit"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    MailLog:
+      type: object
+      required:
+        - id
+        - group_id
+        - from_id
+        - to_id
+        - amount_cents
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        from_id:
+          type: string
+          format: uuid
+        to_id:
+          type: string
+          format: uuid
+        expense_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount_cents:
+          type: integer
+          minimum: 0
+        status:
+          $ref: "#/components/schemas/MailLogStatus"
+        error_message:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    MailLogListResponse:
+      type: object
+      required:
+        - mail_logs
+        - meta
+      properties:
+        mail_logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/MailLog"
+        meta:
+          $ref: "#/components/schemas/PaginationMeta"
+
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - per_page
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_count:
+          type: integer
+          nullable: true
+        total_pages:
+          type: integer
+          nullable: true
