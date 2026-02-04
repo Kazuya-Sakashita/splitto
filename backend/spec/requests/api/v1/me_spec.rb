@@ -39,12 +39,13 @@ RSpec.describe "GET /api/v1/me", type: :request do
             allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
           end
 
-          it "重複作成せず 200 を返す" do
+          it "重複作成せず 200 を返し、OpenAPI schema に一致する" do
             expect { do_request }.not_to change(User, :count)
 
             expect(response).to have_http_status(:ok)
             expect(User.where(external_uid: sub).count).to eq(1)
             expect(User.find_by!(external_uid: sub).id).to eq(existing_user.id)
+            assert_response_schema_confirm
           end
         end
       end
