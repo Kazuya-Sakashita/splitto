@@ -30,6 +30,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      OPENAPI_SCHEMA_PATH: /openapi/openapi.yaml
       TZ: UTC
       RAILS_ENV: development
       DATABASE_HOST: db
@@ -40,6 +41,7 @@ services:
       - "3000:3000"
     volumes:
       - ./backend:/app
+      - ./openapi:/openapi:ro
       - bundle-cache:/usr/local/bundle
     tty: true
     stdin_open: true
@@ -63,10 +65,22 @@ services:
       - "8000:3000"
     volumes:
       - ./frontend:/app
+      - ./openapi:/openapi:ro
       - node-modules:/app/node_modules
     depends_on:
       - api
     command: bash -lc "npm install && npm run dev -- -p 3000 -H 0.0.0.0"
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    environment:
+      SWAGGER_JSON: /openapi/openapi.yaml
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./openapi:/openapi:ro
+    depends_on:
+      - api
 
 volumes:
   db-data:
