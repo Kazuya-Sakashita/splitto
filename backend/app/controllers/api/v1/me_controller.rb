@@ -6,7 +6,7 @@ module Api
       include ClerkAuthenticatable
 
       def show
-        render json: { id: current_user.id, external_uid: current_user.external_uid }
+        render json: { user: current_user.as_json(only: %i[id external_uid name email notify_email theme_mode created_at updated_at]) }
       end
     end
   end

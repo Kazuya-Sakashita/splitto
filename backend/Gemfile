@@ -58,6 +58,12 @@ group :development, :test do
   gem "factory_bot_rails"
 end
 
+group :test do
+  gem "committee"
+  gem "committee-rails"
+end
+
+
 
 gem "jwt"
 gem "rack-cors"
