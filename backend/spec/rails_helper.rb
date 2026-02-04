@@ -8,6 +8,8 @@ require_relative "../config/environment"
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 
 require "rspec/rails"
+require "committee/rails/test/methods"
+
 
 # ✅ spec/support 配下のヘルパーや shared_context を自動で読み込む
 Rails.root.glob("spec/support/**/*.rb").sort_by(&:to_s).each { |f| require f }
@@ -36,4 +38,6 @@ RSpec.configure do |config|
   config.before(:each, type: :request) do
     host! "localhost"
   end
+
+  config.include Committee::Rails::Test::Methods, type: :request
 end
