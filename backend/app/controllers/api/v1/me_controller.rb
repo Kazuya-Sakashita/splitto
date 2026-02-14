@@ -3,10 +3,25 @@
 module Api
   module V1
     class MeController < ApplicationController
-      include ClerkAuthenticatable
-
       def show
-        render json: { user: current_user.as_json(only: %i[id external_uid name email notify_email theme_mode created_at updated_at]) }
+        user = current_user
+
+        render json: { user: user_json(user) }, status: :ok
+      end
+
+      private
+
+      def user_json(user)
+        {
+          id: user.id,
+          external_uid: user.external_uid,
+          name: user.name,
+          email: user.email,
+          notify_email: user.notify_email,
+          theme_mode: user.theme_mode,
+          created_at: user.created_at&.iso8601,
+          updated_at: user.updated_at&.iso8601
+        }
       end
     end
   end
