@@ -40,16 +40,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
 
         context "同じ sub の User が既に存在するとき" do
           let!(:sub) { "user_same" }
-
-          # FactoryBot の create が使えるなら create(:user, ...) でもOK
-          # ただし public_id(26) 必須なのでここでは明示して安全にする
-          let!(:existing_user) do
-            User.create!(
-              external_uid: sub,
-              public_id: generate_public_id
-              # name/email/notify_email/theme_mode は nullable/デフォルトありなので省略OK
-            )
-          end
+          let!(:existing_user) { create(:user, external_uid: sub) }
 
           it "重複作成せず 200 を返し、OpenAPI schema に一致する" do
             expect { do_request }.not_to change(User, :count)

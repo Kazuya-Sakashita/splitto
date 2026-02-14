@@ -59,20 +59,15 @@ RSpec.describe Member, type: :model do
     describe "異常系" do
       context "同一 (group_id, user_id) を重複させたとき" do
         let!(:member) { create(:member) }
+        let!(:duplicate) { build(:member, group: member.group, user: member.user) }
 
         it "無効であること（モデルバリデーション）" do
-          duplicate = build(:member, group: member.group, user: member.user)
-
           expect(duplicate).not_to be_valid
           expect(duplicate.errors[:user_id]).to be_present
         end
 
         it "DBレベルでも重複が防がれること" do
-          attrs = attributes_for(:member, group_id: member.group_id, user_id: member.user_id)
-
-          expect do
-            described_class.insert!(attrs)
-          end.to raise_error(ActiveRecord::RecordNotUnique)
+          expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
         end
       end
     end
