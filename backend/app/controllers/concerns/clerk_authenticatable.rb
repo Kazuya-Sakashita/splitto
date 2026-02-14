@@ -4,7 +4,6 @@ module ClerkAuthenticatable
   extend ActiveSupport::Concern
 
   included do
-    before_action :authenticate_with_clerk!
     attr_reader :current_user, :current_clerk_payload
   end
 

@@ -3,17 +3,8 @@
 module Api
   module V1
     class MeController < ApplicationController
-      include ClerkAuthenticatable
-
-      # ClerkAuthenticatable 側で current_user をセットする想定
-      # もし before_action が無い実装なら、これを付けてください
-      before_action :authenticate_with_clerk!
-
       def show
         user = current_user
-
-        # 念のため（想定外で current_user が nil になっても 500 を避ける）
-        return render_unauthorized("missing_token") if user.nil?
 
         render json: { user: user_json(user) }, status: :ok
       end
