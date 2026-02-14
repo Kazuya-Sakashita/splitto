@@ -3,12 +3,6 @@
 module Api
   module V1
     class MeController < ApplicationController
-      include ClerkAuthenticatable
-
-      # ClerkAuthenticatable 側で current_user をセットする想定
-      # もし before_action が無い実装なら、これを付けてください
-      before_action :authenticate_with_clerk!
-
       def show
         user = current_user
 
