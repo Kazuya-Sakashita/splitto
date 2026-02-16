@@ -32,4 +32,7 @@ RSpec.configure do |config|
 
   config.include Committee::Rails::Test::Methods, type: :request
   config.include FactoryBot::Syntax::Methods
+  config.define_derived_metadata do |meta|
+		meta[:aggregate_failures] = true unless meta.key?(:aggregate_failures)
+	end
 end
