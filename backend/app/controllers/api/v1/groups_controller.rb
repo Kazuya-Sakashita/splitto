@@ -1,5 +1,4 @@
 class Api::V1::GroupsController < ApplicationController
-  include ClerkAuthenticatable
 
   def create
     group = nil
@@ -16,7 +15,7 @@ class Api::V1::GroupsController < ApplicationController
       )
     end
 
-    render json: { group: group }, status: :created
+    render json: { group: group_json(group) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
   end
@@ -25,5 +24,16 @@ class Api::V1::GroupsController < ApplicationController
 
   def group_params
     params.require(:group).permit(:name, :currency)
+  end
+
+  def group_json(group)
+    {
+      public_id: group.public_id,
+      name: group.name,
+      currency: group.currency,
+      invite_token: group.invite_token,
+      created_at: group.created_at.iso8601,
+      updated_at: group.updated_at.iso8601
+    }
   end
 end
