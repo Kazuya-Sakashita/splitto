@@ -1,5 +1,6 @@
-class Api::V1::GroupsController < ApplicationController
+# frozen_string_literal: true
 
+class Api::V1::GroupsController < ApplicationController
   def create
     group = nil
 
@@ -11,13 +12,18 @@ class Api::V1::GroupsController < ApplicationController
         user: current_user,
         role: "OWNER",
         active: true,
-        joined_at: Time.current
+        joined_at: Time.current,
+        left_at: nil
       )
     end
 
     render json: { group: group_json(group) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
-    render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
+    render_validation_error(e.record)
+  rescue StandardError => e
+    Rails.logger.error("[GroupsController#create] #{e.class}: #{e.message}")
+    Rails.logger.error(e.backtrace.join("\n")) if e.backtrace.present?
+    render_internal_server_error
   end
 
   private
@@ -32,8 +38,8 @@ class Api::V1::GroupsController < ApplicationController
       name: group.name,
       currency: group.currency,
       invite_token: group.invite_token,
-      created_at: group.created_at.iso8601,
-      updated_at: group.updated_at.iso8601
+      created_at: group.created_at&.iso8601,
+      updated_at: group.updated_at&.iso8601
     }
   end
 end
