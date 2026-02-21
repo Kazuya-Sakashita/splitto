@@ -32,4 +32,22 @@ RSpec.configure do |config|
 
   config.include Committee::Rails::Test::Methods, type: :request
   config.include FactoryBot::Syntax::Methods
+
+  # request spec は aggregate_failures をデフォルトON（Splittoルール）
+  config.define_derived_metadata do |meta|
+    meta[:aggregate_failures] = true unless meta.key?(:aggregate_failures)
+  end
+
+  # OpenAPI schema を使ってレスポンス検証（committee-rails）
+  config.committee_options = {
+    schema_path: ENV.fetch(
+      "OPENAPI_SCHEMA_PATH",
+      Rails.root.join("openapi/openapi.yaml").to_s
+    ),
+    prefix: "",
+    parse_response_by_content_type: false,
+    strict: true,
+    old_assert_behavior: false,
+    raise: true
+  }
 end
