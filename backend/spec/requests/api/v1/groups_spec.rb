@@ -8,16 +8,16 @@ RSpec.describe "POST /api/v1/groups", type: :request do
   describe "認証" do
     context "認証成功（Authorization: Bearer / verify! 成功）" do
       let!(:token) { "dummy" }
+      let!(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
+      let!(:sub) { "user_abc" }
+      let!(:payload) { { "sub" => sub, "azp" => allowed_origin } }
+
       let!(:headers) do
         {
           "Authorization" => "Bearer #{token}",
           "Content-Type" => "application/json"
         }
       end
-
-      let!(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
-      let!(:sub) { "user_abc" }
-      let!(:payload) { { "sub" => sub, "azp" => allowed_origin } }
 
       let!(:user) { create(:user, external_uid: sub) }
 
@@ -34,19 +34,24 @@ RSpec.describe "POST /api/v1/groups", type: :request do
             .and change(Member, :count).by(1)
 
           expect(response).to have_http_status(:created)
+          assert_response_schema_confirm(201)
 
           created_group = Group.order(:id).last
           created_member = Member.order(:id).last
 
-          expect(created_group.name).to eq("旅行精算")
-          expect(created_group.currency).to eq("JPY")
+          expect(created_group).to have_attributes(
+            name: "旅行精算",
+            currency: "JPY"
+          )
           expect(created_group.public_id).to be_present
           expect(created_group.invite_token).to be_present
 
-          expect(created_member.group_id).to eq(created_group.id)
-          expect(created_member.user_id).to eq(user.id)
-          expect(created_member.role).to eq("OWNER")
-          expect(created_member.active).to be(true)
+          expect(created_member).to have_attributes(
+            group_id: created_group.id,
+            user_id: user.id,
+            role: "OWNER",
+            active: true
+          )
           expect(created_member.joined_at).to be_present
           expect(created_member.left_at).to be_nil
 
@@ -68,16 +73,25 @@ RSpec.describe "POST /api/v1/groups", type: :request do
       context "name が不正なとき（空文字）" do
         let!(:params) { { group: { name: "", currency: "JPY" } } }
 
-        it "422 を返し、Group / Member を作成しない" do
+        it "422 を返し、Group / Member を作成しない（Problem Details）" do
           expect { do_request }
             .to change(Group, :count).by(0)
             .and change(Member, :count).by(0)
 
           expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.media_type).to eq("application/problem+json")
+          assert_response_schema_confirm(422)
 
           body = response.parsed_body
-          expect(body).to include("errors")
-          expect(body["errors"]).to be_an(Array)
+          expect(body).to include(
+            "title" => "Unprocessable Entity",
+            "status" => 422,
+            "reason" => "validation_error"
+          )
+
+          expect(body["errors"]).to be_a(Hash)
+          expect(body["errors"]).to include("name")
+          expect(body["errors"]["name"]).to be_an(Array)
         end
       end
     end
@@ -87,14 +101,18 @@ RSpec.describe "POST /api/v1/groups", type: :request do
       let!(:params) { { group: { name: "旅行精算", currency: "JPY" } } }
 
       before do
+        # missing_token の場合は verify! が呼ばれない想定だが、
+        # have_received を使うために stub を用意しておく
         allow(Clerk::JwtVerifier).to receive(:verify!)
       end
 
-      it "401 missing_token を返す" do
+      it "401 missing_token を返す（Problem Details）" do
         do_request
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.media_type).to eq("application/problem+json")
+        assert_response_schema_confirm(401)
+
         expect(response.parsed_body).to include(
           "title" => "Unauthorized",
           "status" => 401,
@@ -123,11 +141,13 @@ RSpec.describe "POST /api/v1/groups", type: :request do
           .and_raise(Clerk::JwtVerifier::VerificationError.new("decode failed"))
       end
 
-      it "401 invalid_token を返す" do
+      it "401 invalid_token を返す（Problem Details）" do
         do_request
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.media_type).to eq("application/problem+json")
+        assert_response_schema_confirm(401)
+
         expect(response.parsed_body).to include(
           "title" => "Unauthorized",
           "status" => 401,

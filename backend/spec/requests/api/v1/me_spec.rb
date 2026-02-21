@@ -1,15 +1,9 @@
 # frozen_string_literal: true
 
 require "rails_helper"
-require "securerandom"
 
 RSpec.describe "GET /api/v1/me", type: :request do
   subject(:do_request) { get "/api/v1/me", headers: headers }
-
-  # public_id は limit: 26 / null: false なので、テストでも 26 文字を作る
-  def generate_public_id
-    SecureRandom.alphanumeric(26)
-  end
 
   describe "認証" do
     describe "正常系" do
@@ -33,7 +27,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
             aggregate_failures do
               expect(response).to have_http_status(:ok)
               expect(User.find_by(external_uid: sub)).to be_present
-              assert_response_schema_confirm
+              assert_response_schema_confirm(200)
             end
           end
         end
@@ -49,7 +43,7 @@ RSpec.describe "GET /api/v1/me", type: :request do
               expect(response).to have_http_status(:ok)
               expect(User.where(external_uid: sub).count).to eq(1)
               expect(User.find_by!(external_uid: sub).id).to eq(existing_user.id)
-              assert_response_schema_confirm
+              assert_response_schema_confirm(200)
             end
           end
         end
@@ -64,16 +58,19 @@ RSpec.describe "GET /api/v1/me", type: :request do
           allow(Clerk::JwtVerifier).to receive(:verify!)
         end
 
-        it "401 missing_token を返す" do
+        it "401 missing_token を返す（Problem Details）" do
           do_request
 
           aggregate_failures do
             expect(response).to have_http_status(:unauthorized)
             expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(401)
+
             expect(response.parsed_body).to include(
               "title" => "Unauthorized",
               "status" => 401,
-              "reason" => "missing_token"
+              "reason" => "missing_token",
+              "detail" => "Authorization header is missing or invalid"
             )
           end
         end
@@ -91,16 +88,19 @@ RSpec.describe "GET /api/v1/me", type: :request do
           allow(Clerk::JwtVerifier).to receive(:verify!)
         end
 
-        it "401 missing_token を返す" do
+        it "401 missing_token を返す（Problem Details）" do
           do_request
 
           aggregate_failures do
             expect(response).to have_http_status(:unauthorized)
             expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(401)
+
             expect(response.parsed_body).to include(
               "title" => "Unauthorized",
               "status" => 401,
-              "reason" => "missing_token"
+              "reason" => "missing_token",
+              "detail" => "Authorization header is missing or invalid"
             )
           end
         end
@@ -120,16 +120,19 @@ RSpec.describe "GET /api/v1/me", type: :request do
             .and_raise(Clerk::JwtVerifier::VerificationError.new("decode failed"))
         end
 
-        it "401 invalid_token を返す" do
+        it "401 invalid_token を返す（Problem Details）" do
           do_request
 
           aggregate_failures do
             expect(response).to have_http_status(:unauthorized)
             expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(401)
+
             expect(response.parsed_body).to include(
               "title" => "Unauthorized",
               "status" => 401,
-              "reason" => "invalid_token"
+              "reason" => "invalid_token",
+              "detail" => "Token verification failed"
             )
           end
         end
@@ -144,16 +147,19 @@ RSpec.describe "GET /api/v1/me", type: :request do
             .and_raise(Clerk::JwtVerifier::VerificationError.new("invalid azp"))
         end
 
-        it "401 invalid_token を返す" do
+        it "401 invalid_token を返す（Problem Details）" do
           do_request
 
           aggregate_failures do
             expect(response).to have_http_status(:unauthorized)
             expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(401)
+
             expect(response.parsed_body).to include(
               "title" => "Unauthorized",
               "status" => 401,
-              "reason" => "invalid_token"
+              "reason" => "invalid_token",
+              "detail" => "Token verification failed"
             )
           end
         end
