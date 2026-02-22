@@ -77,6 +77,8 @@ paths:
       tags:
         - Groups
       summary: グループ一覧（自分が所属する active=true のみ）
+      parameters:
+        - $ref: "#/components/parameters/Page"
       responses:
         "200":
           description: OK
@@ -86,6 +88,7 @@ paths:
                 $ref: "#/components/schemas/GroupListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
     post:
       operationId: createGroup
       tags:
@@ -1178,11 +1181,17 @@ components:
       properties:
         page:
           type: integer
+          minimum: 1
+          example: 1
         per_page:
           type: integer
+          enum: [20]
+          example: 20
         total_count:
           type: integer
           nullable: true
+          example: 42
         total_pages:
           type: integer
           nullable: true
+          example: 3
