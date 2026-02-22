@@ -76,10 +76,7 @@ paths:
       operationId: listGroups
       tags:
         - Groups
-      summary: グループ一覧
-      parameters:
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/PerPage"
+      summary: グループ一覧（自分が所属する active=true のみ）
       responses:
         "200":
           description: OK
@@ -89,7 +86,6 @@ paths:
                 $ref: "#/components/schemas/GroupListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
-
     post:
       operationId: createGroup
       tags:
@@ -725,6 +721,32 @@ components:
           type: string
           format: date-time
 
+    GroupListItem:
+      type: object
+      required:
+        - public_id
+        - name
+        - currency
+        - updated_at
+        - member_count
+      properties:
+        public_id:
+          type: string
+          example: "01H00000000000000000000012"
+        name:
+          type: string
+          example: "新しい"
+        currency:
+          type: string
+          example: "JPY"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-02-21T23:10:38Z"
+        member_count:
+          type: integer
+          example: 2
+
     GroupCreateRequest:
       type: object
       required:
@@ -761,7 +783,7 @@ components:
         groups:
           type: array
           items:
-            $ref: "#/components/schemas/Group"
+            $ref: "#/components/schemas/GroupListItem"
         meta:
           $ref: "#/components/schemas/PaginationMeta"
 
