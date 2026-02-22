@@ -158,7 +158,9 @@ RSpec.describe "Groups API", type: :request do
   end
 
   describe "GET /api/v1/groups" do
-    subject(:do_request) { get "/api/v1/groups", headers: headers }
+    subject(:do_request) { get "/api/v1/groups", params: query, headers: headers }
+
+    let(:query) { {} }
 
     describe "認証" do
       context "認証成功（Authorization: Bearer / verify! 成功）" do
@@ -180,7 +182,7 @@ RSpec.describe "Groups API", type: :request do
           allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
         end
 
-        context "所属グループがあるとき" do
+        context "所属グループがあるとき（基本）" do
           let!(:active_newer_group) { create(:group, name: "新しい", currency: "JPY", updated_at: 2.hours.ago) }
           let!(:active_older_group) { create(:group, name: "古い", currency: "JPY", updated_at: 2.days.ago) }
           let!(:inactive_group) { create(:group, name: "退出済み", currency: "JPY") }
@@ -196,8 +198,6 @@ RSpec.describe "Groups API", type: :request do
 
             # newer_group は +1 人で member_count=2
             create(:member, user: other_user, group: active_newer_group, active: true, role: "MEMBER", joined_at: Time.current)
-
-            # older_group は自分だけで member_count=1
 
             # 退出済み（自分だが inactive）
             create(:member, user: user, group: inactive_group, active: false, role: "MEMBER", joined_at: Time.current, left_at: Time.current)
@@ -241,14 +241,18 @@ RSpec.describe "Groups API", type: :request do
             expect(returned_ids).not_to include(inactive_group.public_id)
             expect(returned_ids).not_to include(other_users_group.public_id)
 
-            # meta も最低限の形を確認（必要なら厳密化）
+            # meta（ページネーション形式）
             meta = body.fetch("meta")
             expect(meta).to be_a(Hash)
+            expect(meta.fetch("page")).to eq(1)
+            expect(meta.fetch("per_page")).to eq(20) # 固定
+            expect(meta.fetch("total_count")).to eq(2)
+            expect(meta.fetch("total_pages")).to eq(1)
           end
         end
 
         context "所属グループが0件のとき" do
-          it "200 を返し、groups: [] を返す" do
+          it "200 を返し、groups: [] と meta(per_page=20) を返す" do
             do_request
 
             expect(response).to have_http_status(:ok)
@@ -258,6 +262,109 @@ RSpec.describe "Groups API", type: :request do
             expect(body).to be_a(Hash)
             expect(body).to include("groups", "meta")
             expect(body.fetch("groups")).to eq([])
+
+            meta = body.fetch("meta")
+            expect(meta.fetch("page")).to eq(1)
+            expect(meta.fetch("per_page")).to eq(20) # 固定
+            expect(meta.fetch("total_count")).to eq(0)
+
+            # 実装方針が (0.to_f / 20).ceil => 0 の場合はこちらに合わせる
+            # total_pages を最低 1 に丸める実装なら 1 に変更してください
+            expect(meta.fetch("total_pages")).to eq(0)
+          end
+        end
+
+        context "ページネーション（per_page 固定 20）" do
+          let!(:other_user) { create(:user) }
+
+          before do
+            # 自分が active で所属するグループを 25 件作る（updated_at desc になるよう時間を振る）
+            # さらに member_count を 2（自分 + other_user）にする
+            base_time = 2.days.ago
+
+            25.times do |i|
+              group = create(
+                :group,
+                name: "G#{i}",
+                currency: "JPY",
+                updated_at: base_time + i.minutes
+              )
+              create(:member, user: user, group: group, active: true, role: "MEMBER", joined_at: Time.current)
+              create(:member, user: other_user, group: group, active: true, role: "MEMBER", joined_at: Time.current)
+            end
+          end
+
+          context "page を指定しないとき" do
+            let(:query) { {} }
+
+            it "1ページ目として 20 件返し、meta.per_page は 20（固定）" do
+              do_request
+
+              expect(response).to have_http_status(:ok)
+              assert_response_schema_confirm(200)
+
+              body = response.parsed_body
+              expect(body.fetch("groups").size).to eq(20)
+
+              meta = body.fetch("meta")
+              expect(meta.fetch("page")).to eq(1)
+              expect(meta.fetch("per_page")).to eq(20)
+              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("total_pages")).to eq(2)
+            end
+          end
+
+          context "page=2 のとき" do
+            let(:query) { { page: 2 } }
+
+            it "2ページ目として 5 件返す（offset が効く）" do
+              do_request
+
+              expect(response).to have_http_status(:ok)
+              assert_response_schema_confirm(200)
+
+              body = response.parsed_body
+              expect(body.fetch("groups").size).to eq(5)
+
+              meta = body.fetch("meta")
+              expect(meta.fetch("page")).to eq(2)
+              expect(meta.fetch("per_page")).to eq(20)
+              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("total_pages")).to eq(2)
+            end
+          end
+
+          context "page が 0 以下のとき" do
+            let(:query) { { page: 0 } }
+
+            it "page は 1 扱いになる" do
+              do_request
+
+              expect(response).to have_http_status(:ok)
+              assert_response_schema_confirm(200)
+
+              meta = response.parsed_body.fetch("meta")
+              expect(meta.fetch("page")).to eq(1)
+            end
+          end
+
+          context "per_page を指定しても無視する設計のとき" do
+            let(:query) { { per_page: 5 } }
+
+            it "返却件数は 20 のまま、meta.per_page も 20 のまま" do
+              do_request
+
+              expect(response).to have_http_status(:ok)
+              assert_response_schema_confirm(200)
+
+              body = response.parsed_body
+              expect(body.fetch("groups").size).to eq(20)
+
+              meta = body.fetch("meta")
+              expect(meta.fetch("per_page")).to eq(20)
+              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("total_pages")).to eq(2)
+            end
           end
         end
       end
