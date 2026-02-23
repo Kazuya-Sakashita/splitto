@@ -1,4 +1,5 @@
 class Member < ApplicationRecord
+  scope :active, -> { where(active: true) }
   belongs_to :group, inverse_of: :members
   belongs_to :user, inverse_of: :members
 
