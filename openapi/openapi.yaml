@@ -1185,7 +1185,6 @@ components:
           example: 1
         per_page:
           type: integer
-          enum: [20]
           example: 20
         total_count:
           type: integer

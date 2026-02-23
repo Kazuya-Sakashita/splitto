@@ -192,17 +192,13 @@ RSpec.describe "Groups API", type: :request do
           let!(:third_user) { create(:user) }
 
           before do
-            # 自分は2グループに所属（active）
             create(:member, user: user, group: active_newer_group, active: true, role: "MEMBER", joined_at: Time.current)
             create(:member, user: user, group: active_older_group, active: true, role: "MEMBER", joined_at: Time.current)
 
-            # newer_group は +1 人で member_count=2
             create(:member, user: other_user, group: active_newer_group, active: true, role: "MEMBER", joined_at: Time.current)
 
-            # 退出済み（自分だが inactive）
             create(:member, user: user, group: inactive_group, active: false, role: "MEMBER", joined_at: Time.current, left_at: Time.current)
 
-            # 他人のグループ（自分は所属してない）
             create(:member, user: third_user, group: other_users_group, active: true, role: "MEMBER", joined_at: Time.current)
           end
 
@@ -220,11 +216,9 @@ RSpec.describe "Groups API", type: :request do
             expect(groups).to be_an(Array)
             expect(groups.size).to eq(2)
 
-            # 並び順：updated_at desc
             expect(groups[0]["public_id"]).to eq(active_newer_group.public_id)
             expect(groups[1]["public_id"]).to eq(active_older_group.public_id)
 
-            # 返却フィールド（最小）
             expect(groups[0]).to include(
               "public_id" => active_newer_group.public_id,
               "name" => "新しい",
@@ -232,20 +226,17 @@ RSpec.describe "Groups API", type: :request do
             )
             expect(groups[0]["updated_at"]).to be_a(String)
 
-            # member_count（2件とも検証）
             expect(groups[0]["member_count"]).to eq(2)
             expect(groups[1]["member_count"]).to eq(1)
 
-            # 退出済み・他人のグループは返らない
             returned_ids = groups.map { |g| g.fetch("public_id") }
             expect(returned_ids).not_to include(inactive_group.public_id)
             expect(returned_ids).not_to include(other_users_group.public_id)
 
-            # meta（ページネーション形式）
             meta = body.fetch("meta")
             expect(meta).to be_a(Hash)
             expect(meta.fetch("page")).to eq(1)
-            expect(meta.fetch("per_page")).to eq(20) # 固定
+            expect(meta.fetch("per_page")).to eq(20)
             expect(meta.fetch("total_count")).to eq(2)
             expect(meta.fetch("total_pages")).to eq(1)
           end
@@ -265,51 +256,48 @@ RSpec.describe "Groups API", type: :request do
 
             meta = body.fetch("meta")
             expect(meta.fetch("page")).to eq(1)
-            expect(meta.fetch("per_page")).to eq(20) # 固定
+            expect(meta.fetch("per_page")).to eq(20)
             expect(meta.fetch("total_count")).to eq(0)
-
-            # 実装方針が (0.to_f / 20).ceil => 0 の場合はこちらに合わせる
-            # total_pages を最低 1 に丸める実装なら 1 に変更してください
             expect(meta.fetch("total_pages")).to eq(0)
           end
         end
 
-        context "ページネーション（per_page 固定 20）" do
+        context "ページネーション（CI負荷対策：stub_const で per_page を小さく）" do
           let!(:other_user) { create(:user) }
 
           before do
-            # 自分が active で所属するグループを 25 件作る（updated_at desc になるよう時間を振る）
-            # さらに member_count を 2（自分 + other_user）にする
+            stub_const("Api::V1::GroupsController::PER_PAGE", 3)
+
+            # 5件あれば十分：
+            # - page=1 => 3件
+            # - page=2 => 2件
+            @groups = create_list(:group, 5, currency: "JPY")
             base_time = 2.days.ago
 
-            25.times do |i|
-              group = create(
-                :group,
-                name: "G#{i}",
-                currency: "JPY",
-                updated_at: base_time + i.minutes
-              )
-              create(:member, user: user, group: group, active: true, role: "MEMBER", joined_at: Time.current)
-              create(:member, user: other_user, group: group, active: true, role: "MEMBER", joined_at: Time.current)
+            @groups.each_with_index do |g, i|
+              g.update!(updated_at: base_time + i.minutes)
+
+              create(:member, user: user, group: g, active: true, role: "MEMBER", joined_at: Time.current)
+              create(:member, user: other_user, group: g, active: true, role: "MEMBER", joined_at: Time.current)
             end
           end
 
           context "page を指定しないとき" do
             let(:query) { {} }
 
-            it "1ページ目として 20 件返し、meta.per_page は 20（固定）" do
+            it "1ページ目として 3 件返し、meta.per_page も 3 になる" do
               do_request
 
               expect(response).to have_http_status(:ok)
               assert_response_schema_confirm(200)
 
               body = response.parsed_body
-              expect(body.fetch("groups").size).to eq(20)
+              expect(body.fetch("groups").size).to eq(3)
 
               meta = body.fetch("meta")
               expect(meta.fetch("page")).to eq(1)
-              expect(meta.fetch("per_page")).to eq(20)
-              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("per_page")).to eq(3)
+              expect(meta.fetch("total_count")).to eq(5)
               expect(meta.fetch("total_pages")).to eq(2)
             end
           end
@@ -317,19 +305,19 @@ RSpec.describe "Groups API", type: :request do
           context "page=2 のとき" do
             let(:query) { { page: 2 } }
 
-            it "2ページ目として 5 件返す（offset が効く）" do
+            it "2ページ目として 2 件返す（offset が効く）" do
               do_request
 
               expect(response).to have_http_status(:ok)
               assert_response_schema_confirm(200)
 
               body = response.parsed_body
-              expect(body.fetch("groups").size).to eq(5)
+              expect(body.fetch("groups").size).to eq(2)
 
               meta = body.fetch("meta")
               expect(meta.fetch("page")).to eq(2)
-              expect(meta.fetch("per_page")).to eq(20)
-              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("per_page")).to eq(3)
+              expect(meta.fetch("total_count")).to eq(5)
               expect(meta.fetch("total_pages")).to eq(2)
             end
           end
@@ -349,20 +337,20 @@ RSpec.describe "Groups API", type: :request do
           end
 
           context "per_page を指定しても無視する設計のとき" do
-            let(:query) { { per_page: 5 } }
+            let(:query) { { per_page: 1 } }
 
-            it "返却件数は 20 のまま、meta.per_page も 20 のまま" do
+            it "返却件数は 3 のまま、meta.per_page も 3 のまま" do
               do_request
 
               expect(response).to have_http_status(:ok)
               assert_response_schema_confirm(200)
 
               body = response.parsed_body
-              expect(body.fetch("groups").size).to eq(20)
+              expect(body.fetch("groups").size).to eq(3)
 
               meta = body.fetch("meta")
-              expect(meta.fetch("per_page")).to eq(20)
-              expect(meta.fetch("total_count")).to eq(25)
+              expect(meta.fetch("per_page")).to eq(3)
+              expect(meta.fetch("total_count")).to eq(5)
               expect(meta.fetch("total_pages")).to eq(2)
             end
           end
