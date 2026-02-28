@@ -12,7 +12,7 @@ export function useGroups(params?: Params) {
   const page = params?.page ?? 1
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const key = ["groups", { page }] as const
+  const key = `/api/v1/groups?page=${page}`
 
   const fetcher = createSWRAuthenticatedFetcher<GroupListResponse>(
     authenticatedFetch,
