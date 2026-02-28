@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { memo, type ReactNode } from "react"
+import { memo } from "react"
+import { Badge } from "@/components/ui/Badge"
 
 export type GroupListItemVM = {
   id: string
@@ -17,6 +18,7 @@ const styles = {
   link: "group block rounded-2xl border border-white/10 bg-white/5 px-5 py-4 transition hover:border-emerald-400/30 hover:bg-white/10",
   title: "truncate text-base font-semibold text-white/90 group-hover:text-white",
   metaRow: "mt-2 flex flex-wrap items-center gap-2 text-xs text-white/60",
+  // 共通Badgeに寄せつつ、見た目を崩さないためにclassNameで上書き
   badge: "rounded-full border border-white/10 bg-black/10 px-2.5 py-1",
   indicatorWrap: "mt-1 flex shrink-0 items-center gap-2",
   dot: "h-2 w-2 rounded-full bg-emerald-400/80 shadow-[0_0_18px_rgba(16,185,129,0.6)]",
@@ -61,15 +63,11 @@ function MetaRow({
 }) {
   return (
     <div className={styles.metaRow}>
-      <Badge>{currency}</Badge>
-      <Badge>更新: {updatedAtLabel}</Badge>
-      <Badge>メンバー {memberCount}人</Badge>
+      <Badge className={styles.badge}>{currency}</Badge>
+      <Badge className={styles.badge}>更新: {updatedAtLabel}</Badge>
+      <Badge className={styles.badge}>メンバー {memberCount}人</Badge>
     </div>
   )
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return <span className={styles.badge}>{children}</span>
 }
 
 function Indicator() {
