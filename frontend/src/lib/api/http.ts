@@ -1,12 +1,4 @@
-import type { ProblemDetails } from "@/types/problemDetails"
-
-export class ApiError extends Error {
-  problem: ProblemDetails
-  constructor(problem: ProblemDetails) {
-    super(problem.title)
-    this.problem = problem
-  }
-}
+import { toApiError } from "@/lib/api/problemDetailsError"
 
 export async function apiFetch<T>(
   input: RequestInfo | URL,
@@ -24,13 +16,5 @@ export async function apiFetch<T>(
     return (await res.json()) as T
   }
 
-  // RFC9457
-  const contentType = res.headers.get("content-type") ?? ""
-  if (contentType.includes("application/problem+json")) {
-    const problem = (await res.json()) as ProblemDetails
-    throw new ApiError(problem)
-  }
-
-  // fallback
-  throw new Error(`Request failed: ${res.status}`)
+  throw await toApiError(res)
 }
