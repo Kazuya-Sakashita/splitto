@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-// ✅ alias を使わず確実に参照する（app/(dashboard)/dashboard/_components からの相対）
-import { useAuthenticatedFetch } from "../../../../../lib/api/authenticatedFetch"
+import { useAuthenticatedFetch } from "@/lib/api/authenticatedFetch"
 
 export function MeDebugButton() {
   const authFetch = useAuthenticatedFetch()

@@ -1,9 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"])
+// 公開OKなページだけ列挙（それ以外はデフォルトで認証必須）
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+])
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isProtectedRoute(req)) return
+  if (isPublicRoute(req)) return
 
   const session = await auth()
   if (!session.userId) {
