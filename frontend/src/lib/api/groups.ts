@@ -1,4 +1,5 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
+import type { GroupListResponse } from "@/types/groups"
 
 export type Group = {
   public_id: string
@@ -14,26 +15,6 @@ export type CreateGroupInput = {
 
 export type CreateGroupResponse = {
   group: Group
-}
-
-export type GroupListItem = {
-  public_id: string
-  name: string
-  currency: string
-  updated_at: string
-  member_count: number
-}
-
-export type PaginationMeta = {
-  page: number
-  per_page: number
-  total_count?: number | null
-  total_pages?: number | null
-}
-
-export type GroupListResponse = {
-  groups: GroupListItem[]
-  meta: PaginationMeta
 }
 
 const DEFAULT_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000"
