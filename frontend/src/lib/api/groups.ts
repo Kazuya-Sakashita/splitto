@@ -9,10 +9,6 @@ export type Group = {
   updated_at?: string
 }
 
-export type CreateGroupInput = {
-  name: string
-}
-
 export type CreateGroupResponse = {
   group: Group
 }
