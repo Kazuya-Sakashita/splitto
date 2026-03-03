@@ -51,7 +51,6 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   const res = await fetch(buildUrl(path, baseUrl), {
     ...init,
     headers,
-    credentials: init.credentials ?? "include",
     cache: init.cache ?? "no-store",
   })
 
