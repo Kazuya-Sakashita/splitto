@@ -18,12 +18,12 @@ export default function GroupsPage() {
     return Math.floor(n)
   }, [searchParams])
 
-  // ✅ 追加：作成直後のハイライト用（/groups?created=<public_id>）
-  const created = useMemo(() => searchParams.get("created"), [searchParams])
+  // 作成直後のハイライト用（/groups?created=<public_id>）
+  const created = searchParams.get("created")
 
   const { groups, meta, isLoading, error } = useGroups({ page })
 
-  // ✅ created は “作成直後の一回だけ” が自然なので、ページ移動時は消す
+  // created は作成直後の一回だけが自然なので、ページ移動時は消す
   const goToPage = useCallback(
     (p: number) => {
       const sp = new URLSearchParams(searchParams.toString())
@@ -58,7 +58,9 @@ export default function GroupsPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
             <p className="text-sm font-semibold">取得に失敗しました</p>
             <p className="mt-2 text-sm text-white/70">
-              {error.message === "UNAUTHORIZED" ? "ログインが必要です。" : "時間をおいて再度お試しください。"}
+              {error.message === "UNAUTHORIZED"
+                ? "ログインが必要です。"
+                : "時間をおいて再度お試しください。"}
             </p>
           </div>
         )}
@@ -67,7 +69,6 @@ export default function GroupsPage() {
 
         {hasGroups && (
           <>
-            {/* ✅ 追加：created を GroupList に渡す */}
             <GroupList groups={groups} highlightedGroupId={created} />
 
             {showPagination && (
