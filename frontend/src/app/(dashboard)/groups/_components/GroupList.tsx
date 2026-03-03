@@ -21,6 +21,12 @@ type Props = {
 
   /** アイテム描画差し替え（必要になった時に効く） */
   renderItem?: (group: GroupDTO) => ReactNode
+
+  /**
+   * 作成直後に一覧で「これを作った」が分かるようにハイライトするID
+   * 例: /groups?created=<public_id> の created
+   */
+  highlightedGroupId?: string | null
 }
 
 const DEFAULTS = {
@@ -35,6 +41,11 @@ const styles = {
   list: "mt-2 space-y-3",
   header: "flex items-center justify-between px-2 py-3",
   heading: "text-sm font-semibold text-white/90",
+
+  // ✅ 追加
+  banner:
+    "mb-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80",
+  highlightWrapper: "rounded-2xl ring-2 ring-emerald-300/30",
 } as const
 
 export function GroupList({
@@ -44,11 +55,18 @@ export function GroupList({
   createHref = DEFAULTS.createHref,
   createLabel = DEFAULTS.createLabel,
   empty,
-  renderItem = defaultRenderItem,
+  renderItem,
+  highlightedGroupId,
 }: Props) {
   if (groups.length === 0) {
     return <>{empty ?? <GroupEmptyState />}</>
   }
+
+  // ✅ 作成直後のバナーは「該当が一覧内に存在する」時だけ出す
+  const createdGroupName =
+    highlightedGroupId ? groups.find((g) => g.public_id === highlightedGroupId)?.name : null
+
+  const render = renderItem ?? makeDefaultRenderItem(highlightedGroupId)
 
   return (
     <section className={styles.section}>
@@ -63,14 +81,35 @@ export function GroupList({
         }
       />
 
-      <div className={styles.list}>{groups.map(renderItem)}</div>
+      {createdGroupName ? (
+        <div className={styles.banner}>「{createdGroupName}」を作成しました</div>
+      ) : null}
+
+      <div className={styles.list}>{groups.map(render)}</div>
     </section>
   )
 }
 
-function defaultRenderItem(group: GroupDTO) {
-  const vm = toGroupListItemVM(group)
-  return <GroupListItem key={vm.id} vm={vm} />
+/**
+ * defaultRenderItem は highlightedGroupId を扱えるように factory 化
+ * - renderItem を差し替えた場合は、呼び出し側で好きな見せ方にできる
+ */
+function makeDefaultRenderItem(highlightedGroupId?: string | null) {
+  return function defaultRenderItem(group: GroupDTO) {
+    const vm = toGroupListItemVM(group)
+    const isHighlighted = highlightedGroupId != null && group.public_id === highlightedGroupId
+
+    const item = <GroupListItem key={vm.id} vm={vm} />
+
+    // ✅ 既存の GroupListItem を壊さず “外側で” ハイライト
+    return isHighlighted ? (
+      <div key={vm.id} className={styles.highlightWrapper}>
+        {item}
+      </div>
+    ) : (
+      item
+    )
+  }
 }
 
 function Header({ title, right }: { title: string; right: ReactNode }) {
