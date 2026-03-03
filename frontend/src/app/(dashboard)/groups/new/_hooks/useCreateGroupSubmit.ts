@@ -4,16 +4,10 @@ import { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import type { UseFormSetError } from "react-hook-form"
 import { createGroup } from "@/lib/api/groups"
+import type { CreateGroupPayload } from "@/lib/api/groups"
 import type { ApiError } from "@/lib/api/problemDetailsError"
 import { useRequireAuth } from "@/hooks/useRequireAuth"
 import type { GroupCreateValues } from "../_schemas/groupCreateSchema"
-
-type CreateGroupPayload = {
-  group: {
-    name: string
-    currency: string
-  }
-}
 
 function buildCreateGroupPayload(values: GroupCreateValues): CreateGroupPayload {
   return {
@@ -38,16 +32,12 @@ export function useCreateGroupSubmit(setError: UseFormSetError<GroupCreateValues
     async (values: GroupCreateValues): Promise<void> => {
       const token = await requireToken("/groups/new")
       if (!token) {
-        setError("root", {
-          type: "server",
-          message: "ログインが必要です。",
-        })
+        setError("root", { type: "server", message: "ログインが必要です。" })
         return
       }
 
       try {
         const payload = buildCreateGroupPayload(values)
-
         const res = await createGroup(payload, { token })
         const createdId = res.group.public_id
 
@@ -57,10 +47,7 @@ export function useCreateGroupSubmit(setError: UseFormSetError<GroupCreateValues
         const err = e as ApiError
 
         if (err.code === "UNAUTHORIZED") {
-          setError("root", {
-            type: "server",
-            message: "ログインが必要です。",
-          })
+          setError("root", { type: "server", message: "ログインが必要です。" })
           return
         }
 
