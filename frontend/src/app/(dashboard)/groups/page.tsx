@@ -18,19 +18,24 @@ export default function GroupsPage() {
     return Math.floor(n)
   }, [searchParams])
 
+  // 作成直後のハイライト用（/groups?created=<public_id>）
+  const created = searchParams.get("created")
+
   const { groups, meta, isLoading, error } = useGroups({ page })
 
+  // created は作成直後の一回だけが自然なので、ページ移動時は消す
   const goToPage = useCallback(
     (p: number) => {
-      router.push(`/groups?page=${p}`, { scroll: false })
+      const sp = new URLSearchParams(searchParams.toString())
+      sp.set("page", String(p))
+      sp.delete("created")
+      router.push(`/groups?${sp.toString()}`, { scroll: false })
     },
-    [router]
+    [router, searchParams]
   )
 
-  const isEmpty =
-    !isLoading && !error && Array.isArray(groups) && groups.length === 0
-  const hasGroups =
-    !isLoading && !error && Array.isArray(groups) && groups.length > 0
+  const isEmpty = !isLoading && !error && Array.isArray(groups) && groups.length === 0
+  const hasGroups = !isLoading && !error && Array.isArray(groups) && groups.length > 0
 
   const totalPages = meta?.total_pages ?? 1
   const currentPage = meta?.page ?? page
@@ -64,14 +69,10 @@ export default function GroupsPage() {
 
         {hasGroups && (
           <>
-            <GroupList groups={groups} />
+            <GroupList groups={groups} highlightedGroupId={created} />
 
             {showPagination && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onChange={goToPage}
-              />
+              <Pagination currentPage={currentPage} totalPages={totalPages} onChange={goToPage} />
             )}
           </>
         )}

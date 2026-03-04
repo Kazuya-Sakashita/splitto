@@ -1,13 +1,11 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 import { useForm, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ButtonLink } from "@/components/ui/ButtonLink"
-import {
-  groupCreateSchema,
-  type GroupCreateValues,
-} from "../_schemas/groupCreateSchema"
+import { groupCreateSchema, type GroupCreateValues } from "../_schemas/groupCreateSchema"
+import { useCreateGroupSubmit } from "../_hooks/useCreateGroupSubmit"
 
 const styles = {
   card: "rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] backdrop-blur",
@@ -16,7 +14,7 @@ const styles = {
   input:
     "mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none transition focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-300/20",
   select:
-    "mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-300/20",
+    "mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none transition focus:border-emerald-400/40 focus:ring-emerald-300/20",
   help: "mt-2 text-xs text-white/50",
   error: "mt-2 text-xs text-rose-200",
   actions: "mt-6 flex flex-wrap items-center gap-3",
@@ -33,73 +31,32 @@ const currencyOptions = [
   { value: "EUR", label: "EUR（ユーロ）" },
 ] as const
 
-type CreateGroupPayload = {
-  group: {
-    name: string
-    currency: string
-  }
-}
-
-/**
- * 将来 API 接続する時に差分を小さくするため、payload 生成は関数でまとめる。
- * バックエンドの `group_params`（params.require(:group).permit(:name, :currency)）に合わせる。
- */
-function buildCreateGroupPayload(values: GroupCreateValues): CreateGroupPayload {
-  return {
-    group: {
-      name: values.name,
-      currency: values.currency,
-    },
-  }
-}
-
-/**
- * API未接続のため、送信中状態（isSubmitting）の UI を確認する目的で擬似的に待機する。
- * API接続時は、この sleep を実際の POST リクエストに置き換える。
- */
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms))
-}
-
 export function GroupCreateForm() {
-  const [notice, setNotice] = useState<string>("")
-
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
+    setError,
   } = useForm<GroupCreateValues>({
     resolver: zodResolver(groupCreateSchema),
     mode: "onChange",
-    defaultValues: {
-      name: "",
-      currency: "JPY",
-    },
+    defaultValues: { name: "", currency: "JPY" },
   })
 
-  /**
-   * #13 方針：UIのみ先行（API未接続）
-   * - submit で「ボタンが反応する」「送信中UIが出る」「成功メッセージが出る」を確認する
-   * - 入力値は “保持する” 前提（リセットしない）
-   */
-  const onSubmit: SubmitHandler<GroupCreateValues> = useCallback(async (values) => {
-    setNotice("")
+  const { submit } = useCreateGroupSubmit(setError)
 
-    await sleep(600)
-
-    const payload = buildCreateGroupPayload(values)
-    console.log("[mock submit] POST /api/v1/groups payload:", payload)
-
-    setNotice(
-      `仮: 「${values.name}」を作成しました（currency: ${values.currency} / API未接続）`
-    )
-
-    // 値は保持する（#13の前提）：reset() は呼ばない
-  }, [])
+  const onSubmit: SubmitHandler<GroupCreateValues> = useCallback(
+    async (values) => {
+      await submit(values)
+    },
+    [submit]
+  )
 
   return (
     <section className={styles.card} aria-label="グループ作成フォーム">
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        {errors.root?.message ? <div className={styles.notice}>{errors.root.message}</div> : null}
+
         <div className={styles.field}>
           <label className={styles.label} htmlFor="name">
             グループ名 <span className="text-rose-200">*</span>
@@ -111,11 +68,10 @@ export function GroupCreateForm() {
             className={styles.input}
             {...register("name")}
             aria-invalid={Boolean(errors.name)}
+            disabled={isSubmitting}
           />
           <p className={styles.help}>1〜50文字</p>
-          {errors.name?.message ? (
-            <p className={styles.error}>{errors.name.message}</p>
-          ) : null}
+          {errors.name?.message ? <p className={styles.error}>{errors.name.message}</p> : null}
         </div>
 
         <div className={styles.field}>
@@ -127,6 +83,7 @@ export function GroupCreateForm() {
             className={styles.select}
             {...register("currency")}
             aria-invalid={Boolean(errors.currency)}
+            disabled={isSubmitting}
           >
             {currencyOptions.map((o) => (
               <option key={o.value} value={o.value}>
@@ -134,21 +91,13 @@ export function GroupCreateForm() {
               </option>
             ))}
           </select>
-          <p className={styles.help}>
-            未指定の場合、バックエンドではデフォルト（例：JPY）になります
-          </p>
-          {errors.currency?.message ? (
-            <p className={styles.error}>{errors.currency.message}</p>
-          ) : null}
+          <p className={styles.help}>未指定の場合、バックエンドではデフォルト（例：JPY）になります</p>
+          {errors.currency?.message ? <p className={styles.error}>{errors.currency.message}</p> : null}
         </div>
 
         <div className={styles.actions}>
-          <button
-            type="submit"
-            className={styles.submit}
-            disabled={!isValid || isSubmitting}
-          >
-            {isSubmitting ? "作成中..." : "作成する（仮）"}
+          <button type="submit" className={styles.submit} disabled={!isValid || isSubmitting}>
+            {isSubmitting ? "作成中..." : "作成する"}
           </button>
 
           <ButtonLink
@@ -160,13 +109,7 @@ export function GroupCreateForm() {
           >
             一覧に戻る
           </ButtonLink>
-
-          <span className="text-xs text-white/50">
-            ※ API接続は次Issueで実装します
-          </span>
         </div>
-
-        {notice ? <div className={styles.notice}>{notice}</div> : null}
       </form>
     </section>
   )
