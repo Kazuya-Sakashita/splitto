@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       get "me", to: "me#show"
       resources :groups, only: %i[index create]
+      resources :invites, param: :invite_token, only: [:show]
     end
   end
 end
