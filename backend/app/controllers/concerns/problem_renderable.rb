@@ -28,6 +28,22 @@ module ProblemRenderable
     render json: payload, status: status, content_type: PROBLEM_JSON
   end
 
+  # 404 の detail を指定して返す（共通化）
+  #
+  # NOTE:
+  # - detail は OpenAPI 上 required 前提のため、呼び出し側で渡す運用を推奨
+  def render_not_found(reason: "not_found", detail: nil, type: "about:blank", instance: nil, **ext)
+    render_problem(
+      title: "Not Found",
+      status: 404,
+      reason: reason,
+      detail: detail,
+      type: type,
+      instance: instance,
+      **ext
+    )
+  end
+
   # 401 の detail を reason から解決して埋める（spec の期待に合わせる）
   def render_unauthorized(reason, detail: nil, type: "about:blank", instance: nil, **ext)
     resolved_detail =
