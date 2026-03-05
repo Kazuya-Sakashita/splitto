@@ -405,6 +405,25 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/invites/{invite_token}:
+    get:
+      operationId: getInvite
+      tags:
+        - Groups
+      summary: 招待トークンからグループ情報を取得（招待ページ表示用）
+      security: [] # 招待ページは未ログインでも参照できる
+      parameters:
+        - $ref: "#/components/parameters/InviteToken"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteGroupResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /api/v1/groups/{groupId}/expenses/{expenseId}/attachments:
     post:
       operationId: createAttachment
@@ -548,6 +567,14 @@ components:
       schema:
         type: string
 
+    InviteToken:
+      name: invite_token
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 招待トークン
+
   responses:
     BadRequest:
       description: Bad Request
@@ -679,6 +706,7 @@ components:
           nullable: true
           default: true
         theme_mode:
+          type: string
           allOf:
             - $ref: "#/components/schemas/ThemeMode"
           nullable: true
@@ -854,6 +882,32 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Member"
+
+    InviteGroupResponse:
+      type: object
+      required:
+        - group
+      properties:
+        group:
+          $ref: "#/components/schemas/InviteGroup"
+
+    InviteGroup:
+      type: object
+      required:
+        - id
+        - name
+        - members_count
+      properties:
+        id:
+          type: string
+          description: グループの public_id
+          example: MyjusiApaCFaYhQVSEAxzjs6Bw
+        name:
+          type: string
+          example: 大阪旅行
+        members_count:
+          type: integer
+          example: 4
 
     Expense:
       type: object
@@ -1137,6 +1191,7 @@ components:
           type: string
         group_id:
           type: string
+          nullable: true
         from_id:
           type: string
         to_id:
