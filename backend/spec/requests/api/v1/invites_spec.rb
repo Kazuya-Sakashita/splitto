@@ -4,11 +4,11 @@ require "rails_helper"
 
 RSpec.describe "Invites API", type: :request do
   describe "GET /api/v1/invites/:invite_token" do
-    let(:invite_token) { "token_123" }
-    let(:owner) { create(:user) }
-    let!(:group) { create(:group, invite_token: invite_token, name: "大阪旅行") }
+    let!(:invite_token) { "token_123" }
 
-    before do
+    let!(:owner) { create(:user) }
+    let!(:group) { create(:group, invite_token: invite_token, name: "大阪旅行") }
+    let!(:member) do
       create(:member, group: group, user: owner, role: "OWNER", active: true, joined_at: Time.current)
     end
 
