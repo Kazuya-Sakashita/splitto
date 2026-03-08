@@ -1,4 +1,5 @@
-# app/models/group.rb
+# frozen_string_literal: true
+
 class Group < ApplicationRecord
   has_many :members, inverse_of: :group, dependent: :destroy
   has_many :users, through: :members
@@ -10,6 +11,19 @@ class Group < ApplicationRecord
   validates :name, presence: true
   validates :currency, presence: true
   validates :invite_token, presence: true, uniqueness: true
+
+  def join_or_rejoin!(user)
+    existing_member = members.find_by(user: user)
+    return existing_member.rejoin! if existing_member.present?
+
+    members.create!(
+      user: user,
+      role: "MEMBER",
+      active: true,
+      joined_at: Time.current,
+      left_at: nil
+    )
+  end
 
   private
 
