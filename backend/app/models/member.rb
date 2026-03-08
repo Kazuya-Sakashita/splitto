@@ -1,5 +1,8 @@
+# frozen_string_literal: true
+
 class Member < ApplicationRecord
   scope :active, -> { where(active: true) }
+
   belongs_to :group, inverse_of: :members
   belongs_to :user, inverse_of: :members
 
@@ -11,6 +14,18 @@ class Member < ApplicationRecord
   validates :active, inclusion: { in: [true, false] }
   validates :joined_at, presence: true
   validates :user_id, uniqueness: { scope: :group_id }
+
+  def rejoin!
+    return self if active?
+
+    update!(
+      active: true,
+      left_at: nil,
+      joined_at: Time.current
+    )
+
+    self
+  end
 
   private
 
