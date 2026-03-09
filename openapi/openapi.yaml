@@ -16,6 +16,8 @@ servers:
 tags:
   - name: Auth
     description: 認証・ログインユーザー関連
+  - name: Me
+    description: ログインユーザー本人向け機能
   - name: Users
     description: ユーザー情報
   - name: Groups
@@ -48,6 +50,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me/shared_group_users:
+    get:
+      operationId: getSharedGroupUsers
+      tags:
+        - Me
+      summary: 同じグループになったことがあるユーザー一覧取得
+      description: >
+        ログインユーザーと同じグループに所属したことがある他ユーザー一覧を取得します。
+        自分自身は含まれません。
+        last_together_at の降順で返します。
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedGroupUsersResponse"
+              examples:
+                default:
+                  summary: shared group users response
+                  value:
+                    shared_group_users:
+                      - user_id: usr_01HABCDEFG1234567890XYZ
+                        last_together_at: "2026-03-05T10:00:00Z"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -411,7 +442,7 @@ paths:
       tags:
         - Groups
       summary: 招待トークンからグループ情報を取得（招待ページ表示用）
-      security: [] # 招待ページは未ログインでも参照できる
+      security: []
       parameters:
         - $ref: "#/components/parameters/InviteToken"
       responses:
@@ -679,6 +710,33 @@ components:
             type: array
             items:
               type: string
+
+    SharedGroupUsersResponse:
+      type: object
+      required:
+        - shared_group_users
+      properties:
+        shared_group_users:
+          type: array
+          description: 同じグループになったことがある他ユーザー一覧
+          items:
+            $ref: "#/components/schemas/SharedGroupUser"
+
+    SharedGroupUser:
+      type: object
+      required:
+        - user_id
+        - last_together_at
+      properties:
+        user_id:
+          type: string
+          description: ユーザーの公開ID
+          example: usr_01HABCDEFG1234567890XYZ
+        last_together_at:
+          type: string
+          format: date-time
+          description: 最後に同じグループにいたとみなす日時
+          example: "2026-03-05T10:00:00Z"
 
     ThemeMode:
       type: string
