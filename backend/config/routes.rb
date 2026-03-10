@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get "me", to: "me#show"
+      get "me/shared_group_users", to: "me/shared_group_users#index"
 
       resources :groups, only: %i[index create]
       resources :invites, param: :invite_token, only: [:show]
