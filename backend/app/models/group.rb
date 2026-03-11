@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Group < ApplicationRecord
+  class MemberAlreadyExistsError < StandardError; end
+
   has_many :members, inverse_of: :group, dependent: :destroy
   has_many :users, through: :members
 
@@ -23,6 +25,25 @@ class Group < ApplicationRecord
       joined_at: Time.current,
       left_at: nil
     )
+  end
+
+  def add_member!(user_public_id:)
+    transaction do
+      user = User.find_by!(public_id: user_public_id)
+
+      if members.exists?(user_id: user.id)
+        raise MemberAlreadyExistsError, "User is already a member of this group"
+      end
+
+      members.create!(
+        user: user,
+        role: "MEMBER",
+        active: true,
+        joined_at: Time.current
+      )
+    end
+  rescue ActiveRecord::RecordNotUnique
+    raise MemberAlreadyExistsError, "User is already a member of this group"
   end
 
   private
