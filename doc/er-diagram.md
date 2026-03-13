@@ -46,6 +46,7 @@ erDiagram
 
   MEMBERS {
     bigint id PK
+    char(26) public_id "ULID(26) UNIQUE (external identifier)"
     bigint group_id FK
     bigint user_id FK
     enum role "OWNER|MEMBER"
@@ -201,6 +202,7 @@ MVPでは **履歴を保持しない** 方針とし、
 
 **主なカラム**
 - `id`：内部用主キー（BIGINT, PK）
+- public_id：外部公開用メンバー識別子（ULID, UNIQUE）
 - `group_id`：GROUPS.id
 - `user_id`：USERS.id
 - `role`：`OWNER | MEMBER`
@@ -209,6 +211,8 @@ MVPでは **履歴を保持しない** 方針とし、
 - `left_at`：直近の退出日時（在籍中は NULL）
 
 **制約・ルール**
+- id は内部処理・JOIN専用とし、外部公開しない
+- public_id は URL / API 等の外部公開識別子として使用する
 - `(group_id, user_id)` は常に 1 レコードのみ
 - 在籍中メンバーは `active = true`
 - 退出処理は `active = false` と `left_at` を同一トランザクションで更新
