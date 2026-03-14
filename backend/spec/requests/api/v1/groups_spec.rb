@@ -35,6 +35,7 @@ RSpec.describe "Groups API", type: :request do
               .and change(Member, :count).by(1)
 
             expect(response).to have_http_status(:created)
+
             assert_response_schema_confirm(201)
 
             created_group = Group.order(:id).last

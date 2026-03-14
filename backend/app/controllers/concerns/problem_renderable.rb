@@ -88,4 +88,28 @@ module ProblemRenderable
       detail: detail
     )
   end
+
+  def render_forbidden(reason:, detail: nil, type: "about:blank", instance: nil, **ext)
+    render_problem(
+      title: "Forbidden",
+      status: 403,
+      reason: reason,
+      detail: detail,
+      type: type,
+      instance: instance,
+      **ext
+    )
+  end
+
+  def render_conflict(reason:, detail: nil, type: "about:blank", instance: nil, **ext)
+    render_problem(
+      title: "Conflict",
+      status: 409,
+      reason: reason,
+      detail: detail,
+      type: type,
+      instance: instance,
+      **ext
+    )
+  end
 end

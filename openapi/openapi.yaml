@@ -199,38 +199,11 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
 
   /api/v1/groups/{groupId}/members:
-    get:
-      operationId: listMembers
-      tags:
-        - Members
-      summary: メンバー一覧
-      parameters:
-        - $ref: "#/components/parameters/GroupId"
-        - name: active
-          in: query
-          required: false
-          schema:
-            type: boolean
-          description: true=在籍中のみ / false=退出済みのみ / 未指定=全件
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MemberListResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
     post:
       operationId: addMember
       tags:
         - Members
-      summary: メンバー追加（招待/参加）
+      summary: メンバー追加
       parameters:
         - $ref: "#/components/parameters/GroupId"
       requestBody:
@@ -241,7 +214,7 @@ paths:
               $ref: "#/components/schemas/MemberAddRequest"
       responses:
         "201":
-          description: Created / Re-joined
+          description: Created
           content:
             application/json:
               schema:
