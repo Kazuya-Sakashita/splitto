@@ -2,10 +2,20 @@
 
 class Api::V1::Groups::MembersController < ApplicationController
   before_action :set_group
-  before_action :authorize_member_create!
+  before_action :authorize_member_addition!
 
   def create
-    member = @group.add_member!(user_public_id: member_params[:user_id])
+    user = User.find_by!(public_id: member_params[:user_id])
+    existing_member = @group.members.find_by(user: user)
+
+    if existing_member&.active?
+      return render_conflict(
+        reason: "member_already_exists",
+        detail: "User is already a member of this group"
+      )
+    end
+
+    member = @group.join_or_rejoin!(user)
 
     render json: { member: member_response(member) }, status: :created
   rescue ActiveRecord::RecordNotFound
@@ -13,7 +23,7 @@ class Api::V1::Groups::MembersController < ApplicationController
       reason: "user_not_found",
       detail: "User not found"
     )
-  rescue Group::MemberAlreadyExistsError
+  rescue ActiveRecord::RecordNotUnique
     render_conflict(
       reason: "member_already_exists",
       detail: "User is already a member of this group"
@@ -31,7 +41,7 @@ class Api::V1::Groups::MembersController < ApplicationController
     )
   end
 
-  def authorize_member_create!
+  def authorize_member_addition!
     current_member = @group.members.find_by(user: current_user, active: true)
 
     return render_forbidden(reason: "not_group_member", detail: "You are not a member of this group") unless current_member
@@ -49,7 +59,7 @@ class Api::V1::Groups::MembersController < ApplicationController
 
   def member_response(member)
     {
-      id: member.id,
+      id: member.public_id,
       group_id: member.group.public_id,
       user_id: member.user.public_id,
       role: member.role,
