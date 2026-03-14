@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_13_234813) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_14_100519) do
   create_table "groups", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency", default: "JPY", null: false
     t.string "invite_token", null: false
+    t.datetime "invite_token_expires_at", null: false
     t.string "name", null: false
     t.string "public_id", limit: 26, null: false
     t.datetime "updated_at", null: false
