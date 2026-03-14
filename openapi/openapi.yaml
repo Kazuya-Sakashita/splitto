@@ -906,8 +906,7 @@ components:
         - updated_at
       properties:
         id:
-          type: integer
-          format: int64
+          type: string
         group_id:
           type: string
         user_id:
