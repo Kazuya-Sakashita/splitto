@@ -6,7 +6,7 @@ module Api
       skip_before_action :authenticate_with_clerk!, only: [:show]
 
       def show
-        group = find_group_by_invite_token!
+        group = find_active_group_by_invite_token!
 
         render json: {
           group: group_response(group)
@@ -17,8 +17,11 @@ module Api
 
       private
 
-      def find_group_by_invite_token!
-        Group.find_by!(invite_token: params[:invite_token])
+      def find_active_group_by_invite_token!
+        group = Group.find_by!(invite_token: params[:invite_token])
+        raise ActiveRecord::RecordNotFound unless group.invite_token_active?
+
+        group
       end
 
       def group_response(group)
