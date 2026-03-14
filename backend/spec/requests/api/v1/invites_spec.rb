@@ -49,14 +49,10 @@ RSpec.describe "Invites API", type: :request do
         )
       end
 
-      it "200 を返すこと" do
+      it "招待情報を返し、200 の OpenAPI スキーマに一致すること" do
         get "/api/v1/invites/#{invite_token}"
 
         expect(response).to have_http_status(:ok)
-      end
-
-      it "招待情報を返すこと" do
-        get "/api/v1/invites/#{invite_token}"
 
         body = JSON.parse(response.body)
 
@@ -69,18 +65,16 @@ RSpec.describe "Invites API", type: :request do
             }
           }
         )
+
+        assert_response_schema_confirm(200)
       end
     end
 
     context "存在しない招待トークンのとき" do
-      it "404 を返すこと" do
+      it "404 を返し、Problem Details を返し、404 の OpenAPI スキーマに一致すること" do
         get "/api/v1/invites/not_found_token"
 
         expect(response).to have_http_status(:not_found)
-      end
-
-      it "Problem Details 形式のエラーレスポンスを返すこと" do
-        get "/api/v1/invites/not_found_token"
 
         body = JSON.parse(response.body)
 
@@ -88,6 +82,8 @@ RSpec.describe "Invites API", type: :request do
         expect(body["status"]).to eq(404)
         expect(body["reason"]).to eq("invalid_invite_token")
         expect(body["detail"]).to eq("invite_token is invalid")
+
+        assert_response_schema_confirm(404)
       end
     end
 
@@ -101,14 +97,10 @@ RSpec.describe "Invites API", type: :request do
         )
       end
 
-      it "404 を返すこと" do
+      it "404 を返し、Problem Details を返し、404 の OpenAPI スキーマに一致すること" do
         get "/api/v1/invites/#{invite_token}"
 
         expect(response).to have_http_status(:not_found)
-      end
-
-      it "Problem Details 形式のエラーレスポンスを返すこと" do
-        get "/api/v1/invites/#{invite_token}"
 
         body = JSON.parse(response.body)
 
@@ -116,6 +108,8 @@ RSpec.describe "Invites API", type: :request do
         expect(body["status"]).to eq(404)
         expect(body["reason"]).to eq("invalid_invite_token")
         expect(body["detail"]).to eq("invite_token is invalid")
+
+        assert_response_schema_confirm(404)
       end
     end
   end
