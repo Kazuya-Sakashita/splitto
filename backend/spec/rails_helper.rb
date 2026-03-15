@@ -19,6 +19,7 @@ rescue ActiveRecord::PendingMigrationError => e
 end
 
 RSpec.configure do |config|
+  config.include ActiveSupport::Testing::TimeHelpers
   config.fixture_paths = [
     Rails.root.join("spec/fixtures")
   ]
@@ -50,4 +51,5 @@ RSpec.configure do |config|
     old_assert_behavior: false,
     raise: true
   }
+
 end
