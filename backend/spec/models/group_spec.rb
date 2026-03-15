@@ -159,4 +159,61 @@ RSpec.describe Group, type: :model do
       end
     end
   end
+
+  describe "#invite_token_active?" do
+    around do |example|
+      freeze_time { example.run }
+    end
+
+    context "有効期限内のとき" do
+      let!(:group) { build(:group, invite_token_expires_at: 24.hours.from_now) }
+
+      it "true を返すこと" do
+        expect(group.invite_token_active?).to be(true)
+      end
+    end
+
+    context "有効期限切れのとき" do
+      let!(:group) { build(:group, invite_token_expires_at: 1.second.ago) }
+
+      it "false を返すこと" do
+        expect(group.invite_token_active?).to be(false)
+      end
+    end
+
+    context "invite_token_expires_at が nil のとき" do
+      let!(:group) { build(:group, invite_token_expires_at: nil) }
+
+      it "false を返すこと" do
+        expect(group.invite_token_active?).to be(false)
+      end
+    end
+  end
+
+  describe "作成時の invite_token_expires_at 設定" do
+    around do |example|
+      freeze_time { example.run }
+    end
+
+    context "invite_token_expires_at を指定しないとき" do
+      let!(:group) { create(:group, invite_token_expires_at: nil) }
+
+      it "invite_token_expires_at が設定されること" do
+        expect(group.invite_token_expires_at).to be_present
+      end
+
+      it "24時間後の値が設定されること" do
+        expect(group.invite_token_expires_at).to eq(24.hours.from_now)
+      end
+    end
+
+    context "invite_token_expires_at を指定するとき" do
+      let!(:expires_at) { 3.days.from_now }
+      let!(:group) { create(:group, invite_token_expires_at: expires_at) }
+
+      it "指定した値が保持されること" do
+        expect(group.invite_token_expires_at).to eq(expires_at)
+      end
+    end
+  end
 end
