@@ -158,6 +158,34 @@ RSpec.describe Group, type: :model do
         expect(returned_member).to eq(member)
       end
     end
+
+    context "member 作成時に競合が発生したとき" do
+      let!(:existing_member) do
+        create(
+          :member,
+          group: group,
+          user: target_user,
+          role: "MEMBER",
+          active: true,
+          joined_at: Time.current,
+          left_at: nil
+        )
+      end
+
+      before do
+        association = group.members
+
+        allow(association).to receive(:find_by).with(user: target_user).and_return(nil)
+        allow(association).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
+        allow(association).to receive(:find_by!).with(user: target_user).and_return(existing_member)
+      end
+
+      it "既存 member を再取得して返すこと" do
+        returned_member = group.join_or_rejoin!(target_user)
+
+        expect(returned_member).to eq(existing_member)
+      end
+    end
   end
 
   describe "#invite_token_active?" do

@@ -52,6 +52,31 @@ RSpec.describe "POST /api/v1/invites/:invite_token/membership", type: :request d
       end
     end
 
+    context "同じユーザーが連続で join するとき" do
+      it "二重参加せず冪等に動作する" do
+        expect do
+          do_request
+          expect(response).to have_http_status(:ok)
+          assert_response_schema_confirm(200)
+
+          do_request
+          expect(response).to have_http_status(:ok)
+          assert_response_schema_confirm(200)
+        end.to change(Member, :count).by(1)
+
+        members = Member.where(group: group, user: user)
+
+        aggregate_failures do
+          expect(members.count).to eq(1)
+
+          member = members.first
+          expect(member.role).to eq("MEMBER")
+          expect(member.active).to eq(true)
+          expect(member.left_at).to be_nil
+        end
+      end
+    end
+
     context "既に active な member が存在するとき" do
       let!(:existing_member) do
         create(
@@ -122,6 +147,45 @@ RSpec.describe "POST /api/v1/invites/:invite_token/membership", type: :request d
           expect(member.left_at).to be_nil
           expect(member.joined_at).to be_present
           expect(member.joined_at).not_to eq(previous_joined_at)
+        end
+      end
+    end
+
+    context "member 作成時に競合が発生したとき" do
+      let!(:existing_member) do
+        create(
+          :member,
+          group: group,
+          user: user,
+          role: "MEMBER",
+          active: true,
+          joined_at: 1.day.ago,
+          left_at: nil
+        )
+      end
+
+      before do
+        association = group.members
+
+        allow(association).to receive(:find_by).with(user: user).and_return(nil)
+        allow(association).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
+        allow(association).to receive(:find_by!).with(user: user).and_return(existing_member)
+        allow(Group).to receive(:find_by!).with(invite_token: invite_token).and_return(group)
+      end
+
+      it "500 にならず既存 member を返す" do
+        expect { do_request }.not_to change(Member, :count)
+
+        expect(response).to have_http_status(:ok)
+        assert_response_schema_confirm(200)
+
+        body = response.parsed_body
+
+        aggregate_failures do
+          expect(body["member"]["id"]).to eq(existing_member.id)
+          expect(body["member"]["role"]).to eq("MEMBER")
+          expect(body["member"]["active"]).to eq(true)
+          expect(body["member"]["left_at"]).to be_nil
         end
       end
     end
