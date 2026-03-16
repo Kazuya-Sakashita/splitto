@@ -159,7 +159,7 @@ RSpec.describe Group, type: :model do
       end
     end
 
-    context "member 作成時に競合が発生したとき" do
+    context "同時実行で既存 member が作成済みのとき" do
       let!(:existing_member) do
         create(
           :member,
@@ -176,11 +176,10 @@ RSpec.describe Group, type: :model do
         association = group.members
 
         allow(association).to receive(:find_by).with(user: target_user).and_return(nil)
-        allow(association).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
-        allow(association).to receive(:find_by!).with(user: target_user).and_return(existing_member)
+        allow(association).to receive(:create_or_find_by!).with(user: target_user).and_return(existing_member)
       end
 
-      it "既存 member を再取得して返すこと" do
+      it "既存 member を返すこと" do
         returned_member = group.join_or_rejoin!(target_user)
 
         expect(returned_member).to eq(existing_member)

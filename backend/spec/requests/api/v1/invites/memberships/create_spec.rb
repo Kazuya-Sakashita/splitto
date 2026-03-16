@@ -52,7 +52,7 @@ RSpec.describe "POST /api/v1/invites/:invite_token/membership", type: :request d
       end
     end
 
-    context "同じユーザーが連続で join するとき" do
+    context "同じユーザーが連続で参加するとき" do
       it "二重参加せず冪等に動作する" do
         expect do
           do_request
@@ -151,7 +151,7 @@ RSpec.describe "POST /api/v1/invites/:invite_token/membership", type: :request d
       end
     end
 
-    context "member 作成時に競合が発生したとき" do
+    context "同時実行で既存 member が作成済みのとき" do
       let!(:existing_member) do
         create(
           :member,
@@ -168,12 +168,11 @@ RSpec.describe "POST /api/v1/invites/:invite_token/membership", type: :request d
         association = group.members
 
         allow(association).to receive(:find_by).with(user: user).and_return(nil)
-        allow(association).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique)
-        allow(association).to receive(:find_by!).with(user: user).and_return(existing_member)
+        allow(association).to receive(:create_or_find_by!).with(user: user).and_return(existing_member)
         allow(Group).to receive(:find_by!).with(invite_token: invite_token).and_return(group)
       end
 
-      it "500 にならず既存 member を返す" do
+      it "既存 member を返し冪等に動作する" do
         expect { do_request }.not_to change(Member, :count)
 
         expect(response).to have_http_status(:ok)
