@@ -22,16 +22,11 @@ class Group < ApplicationRecord
     return existing_member if existing_member&.active?
     return existing_member.rejoin! if existing_member.present?
 
-    begin
-      members.create!(
-        user: user,
-        role: "MEMBER",
-        active: true,
-        joined_at: Time.current,
-        left_at: nil
-      )
-    rescue ActiveRecord::RecordNotUnique
-      members.find_by!(user: user)
+    members.create_or_find_by!(user: user) do |member|
+      member.role = "MEMBER"
+      member.active = true
+      member.joined_at = Time.current
+      member.left_at = nil
     end
   end
 
