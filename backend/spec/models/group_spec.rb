@@ -158,6 +158,33 @@ RSpec.describe Group, type: :model do
         expect(returned_member).to eq(member)
       end
     end
+
+    context "同時実行で既存 member が作成済みのとき" do
+      let!(:existing_member) do
+        create(
+          :member,
+          group: group,
+          user: target_user,
+          role: "MEMBER",
+          active: true,
+          joined_at: Time.current,
+          left_at: nil
+        )
+      end
+
+      before do
+        association = group.members
+
+        allow(association).to receive(:find_by).with(user: target_user).and_return(nil)
+        allow(association).to receive(:create_or_find_by!).with(user: target_user).and_return(existing_member)
+      end
+
+      it "既存 member を返すこと" do
+        returned_member = group.join_or_rejoin!(target_user)
+
+        expect(returned_member).to eq(existing_member)
+      end
+    end
   end
 
   describe "#invite_token_active?" do

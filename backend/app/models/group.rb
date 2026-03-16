@@ -18,15 +18,16 @@ class Group < ApplicationRecord
 
   def join_or_rejoin!(user)
     existing_member = members.find_by(user: user)
+
+    return existing_member if existing_member&.active?
     return existing_member.rejoin! if existing_member.present?
 
-    members.create!(
-      user: user,
-      role: "MEMBER",
-      active: true,
-      joined_at: Time.current,
-      left_at: nil
-    )
+    members.create_or_find_by!(user: user) do |member|
+      member.role = "MEMBER"
+      member.active = true
+      member.joined_at = Time.current
+      member.left_at = nil
+    end
   end
 
   def invite_token_active?
