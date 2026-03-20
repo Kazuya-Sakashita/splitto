@@ -7,6 +7,8 @@ class Member < ApplicationRecord
   belongs_to :user, inverse_of: :members
 
   ROLES = %w[OWNER MEMBER].freeze
+  ROLE_OWNER = "OWNER"
+  ROLE_MEMBER = "MEMBER"
 
   before_validation :ensure_public_id, on: :create
   before_validation :ensure_joined_at, on: :create

@@ -34,8 +34,7 @@ module Api
 
         def authorize_owner!
           return if performed?
-          return if @group.members.exists?(user: current_user, role: "OWNER", active: true)
-
+          return if @group.members.exists?(user: current_user, role: Member::ROLE_OWNER, active: true)
           render_forbidden(
             reason: "forbidden",
             detail: "You are not allowed to regenerate invite token for this group"
