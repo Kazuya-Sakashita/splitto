@@ -243,4 +243,42 @@ RSpec.describe Group, type: :model do
       end
     end
   end
+
+  describe "#regenerate_invite_token!" do
+    around do |example|
+      freeze_time { example.run }
+    end
+
+    let!(:group) do
+      create(
+        :group,
+        invite_token: "old_invite_token",
+        invite_token_expires_at: 12.hours.from_now
+      )
+    end
+
+    context "招待トークンを再生成するとき" do
+      it "invite_token が更新されること" do
+        old_token = group.invite_token
+
+        group.regenerate_invite_token!
+
+        expect(group.reload.invite_token).not_to eq(old_token)
+      end
+
+      it "invite_token_expires_at が更新されること" do
+        group.regenerate_invite_token!
+
+        expect(group.reload.invite_token_expires_at).to eq(24.hours.from_now)
+      end
+
+      it "旧トークンと異なる値になること" do
+        old_token = group.invite_token
+
+        group.regenerate_invite_token!
+
+        expect(group.reload.invite_token).not_to eq(old_token)
+      end
+    end
+  end
 end
