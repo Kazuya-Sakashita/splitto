@@ -21,7 +21,7 @@ RSpec.describe "PATCH /api/v1/groups/:group_id/invite_token", type: :request do
       :member,
       group: group,
       user: owner,
-      role: "OWNER",
+      role: Member::ROLE_OWNER,
       active: true,
       joined_at: Time.current
     )
@@ -96,17 +96,74 @@ RSpec.describe "PATCH /api/v1/groups/:group_id/invite_token", type: :request do
           :member,
           group: group,
           user: member_user,
-          role: "MEMBER",
+          role: Member::ROLE_MEMBER,
           active: true,
           joined_at: Time.current
         )
       end
 
       before do
-        member_record
-
         allow(Clerk::JwtVerifier).to receive(:verify!).with(token).and_return(
           { "sub" => member_user.external_uid }
+        )
+      end
+
+      it "403を返すこと" do
+        do_request
+
+        expect(response).to have_http_status(:forbidden), response.body
+        assert_response_schema_confirm(403)
+
+        body = JSON.parse(response.body)
+        expect(response.content_type).to include("application/problem+json")
+        expect(body["title"]).to eq("Forbidden")
+        expect(body["status"]).to eq(403)
+        expect(body["reason"]).to eq("forbidden")
+        expect(body["detail"]).to be_present
+      end
+    end
+
+    context "実行ユーザーが active: false の元オーナーのとき" do
+      let!(:inactive_owner_user) { create(:user) }
+      let!(:inactive_owner_member) do
+        create(
+          :member,
+          group: group,
+          user: inactive_owner_user,
+          role: Member::ROLE_OWNER,
+          active: false,
+          joined_at: 2.days.ago,
+          left_at: 1.day.ago
+        )
+      end
+
+      before do
+        allow(Clerk::JwtVerifier).to receive(:verify!).with(token).and_return(
+          { "sub" => inactive_owner_user.external_uid }
+        )
+      end
+
+      it "403を返すこと" do
+        do_request
+
+        expect(response).to have_http_status(:forbidden), response.body
+        assert_response_schema_confirm(403)
+
+        body = JSON.parse(response.body)
+        expect(response.content_type).to include("application/problem+json")
+        expect(body["title"]).to eq("Forbidden")
+        expect(body["status"]).to eq(403)
+        expect(body["reason"]).to eq("forbidden")
+        expect(body["detail"]).to be_present
+      end
+    end
+
+    context "実行ユーザーがグループの非メンバーユーザーのとき" do
+      let!(:non_member_user) { create(:user) }
+
+      before do
+        allow(Clerk::JwtVerifier).to receive(:verify!).with(token).and_return(
+          { "sub" => non_member_user.external_uid }
         )
       end
 

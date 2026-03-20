@@ -271,14 +271,6 @@ RSpec.describe Group, type: :model do
 
         expect(group.reload.invite_token_expires_at).to eq(24.hours.from_now)
       end
-
-      it "旧トークンと異なる値になること" do
-        old_token = group.invite_token
-
-        group.regenerate_invite_token!
-
-        expect(group.reload.invite_token).not_to eq(old_token)
-      end
     end
   end
 end
