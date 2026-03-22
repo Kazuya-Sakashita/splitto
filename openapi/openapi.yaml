@@ -257,6 +257,39 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /api/v1/groups/{groupId}/invite_token:
+    patch:
+      operationId: regenerateGroupInviteToken
+      tags:
+        - Groups
+      summary: 招待トークン再生成
+      description: >
+        グループオーナーが招待トークンを再生成します。
+        再生成後は旧トークンが無効化され、新しいトークンのみ有効になります。
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupInviteTokenResponse"
+              examples:
+                success:
+                  summary: 招待トークン再生成成功
+                  value:
+                    invite_token: "new_invite_token_xxxxx"
+                    invite_token_expires_at: "2026-03-21T10:14:20Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
   /api/v1/groups/{groupId}/expenses:
     get:
       operationId: listExpenses
@@ -899,6 +932,22 @@ components:
             $ref: "#/components/schemas/GroupListItem"
         meta:
           $ref: "#/components/schemas/PaginationMeta"
+
+    GroupInviteTokenResponse:
+      type: object
+      required:
+        - invite_token
+        - invite_token_expires_at
+      properties:
+        invite_token:
+          type: string
+          description: 再生成後の招待トークン
+          example: "new_invite_token_xxxxx"
+        invite_token_expires_at:
+          type: string
+          format: date-time
+          description: 招待トークンの有効期限
+          example: "2026-03-21T10:14:20Z"
 
     Member:
       type: object

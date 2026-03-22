@@ -30,6 +30,13 @@ class Group < ApplicationRecord
     end
   end
 
+  def regenerate_invite_token!
+    update!(
+      invite_token: generate_unique_invite_token,
+      invite_token_expires_at: Time.current + INVITE_TOKEN_EXPIRES_IN
+    )
+  end
+
   def invite_token_active?
     invite_token_expires_at.present? && invite_token_expires_at > Time.current
   end
@@ -48,15 +55,19 @@ class Group < ApplicationRecord
   def ensure_invite_token
     return if invite_token.present?
 
-    self.invite_token = loop do
-      candidate = SecureRandom.base58(32)
-      break candidate unless self.class.exists?(invite_token: candidate)
-    end
+    self.invite_token = generate_unique_invite_token
   end
 
   def ensure_invite_token_expires_at
     return if invite_token_expires_at.present?
 
     self.invite_token_expires_at = Time.current + INVITE_TOKEN_EXPIRES_IN
+  end
+
+  def generate_unique_invite_token
+    loop do
+      candidate = SecureRandom.base58(32)
+      break candidate unless self.class.exists?(invite_token: candidate)
+    end
   end
 end

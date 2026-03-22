@@ -10,7 +10,9 @@ Rails.application.routes.draw do
 
       resources :groups, only: %i[index create] do
         resources :members, only: [:create], module: :groups
+        resource :invite_token, only: [:update], module: :groups
       end
+
       resources :invites, param: :invite_token, only: [:show]
 
       post "invites/:invite_token/membership", to: "invites/memberships#create"
