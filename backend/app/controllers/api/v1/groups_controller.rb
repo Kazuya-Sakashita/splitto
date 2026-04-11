@@ -111,8 +111,8 @@ class Api::V1::GroupsController < ApplicationController
       public_id: group.public_id,
       name: group.name,
       currency: group.currency,
-      created_at: group.created_at,
-      updated_at: group.updated_at
+      created_at: group.created_at&.iso8601,
+      updated_at: group.updated_at&.iso8601
     }
   end
 
