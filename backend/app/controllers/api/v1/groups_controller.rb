@@ -68,7 +68,7 @@ class Api::V1::GroupsController < ApplicationController
 
   def show
     group = find_group_by_public_id
-    return render_group_not_found if group.nil?
+    return render_not_found(detail: "Group not found", reason: "not_found") if group.nil?
 
     return render_forbidden(detail: "forbidden", reason: "forbidden") unless active_membership?(group)
 
@@ -114,16 +114,6 @@ class Api::V1::GroupsController < ApplicationController
       created_at: group.created_at,
       updated_at: group.updated_at
     }
-  end
-
-  def render_group_not_found
-    render json: {
-      type: "about:blank",
-      title: "Not Found",
-      status: 404,
-      detail: "Group not found",
-      reason: "not_found"
-    }, status: :not_found, content_type: "application/problem+json"
   end
 
   def group_params
