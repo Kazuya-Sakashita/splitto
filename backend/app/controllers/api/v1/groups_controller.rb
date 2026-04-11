@@ -94,7 +94,7 @@ class Api::V1::GroupsController < ApplicationController
   end
 
   def active_members(group)
-    group.members.where(active: true)
+    group.members.where(active: true).includes(:user)
   end
 
   def active_members_json(group)
