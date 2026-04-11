@@ -4,22 +4,17 @@ class Api::V1::GroupsController < ApplicationController
   PER_PAGE = 20
 
   def index
-    page = params.fetch(:page, 1).to_i
-    page = 1 if page < 1
+    page = normalized_page
     per_page = PER_PAGE
 
-    # 「自分が active=true で所属している group」のみを母集団として確定
     member_group_ids = current_user
       .members
       .active
       .select(:group_id)
 
-    # total_count も同じ母集団（= 自分の active 所属グループ数）
     total_count = member_group_ids.distinct.count
 
-    #  一覧に出す group は「自分の active 所属」だけに限定した上で、
-    #  member_count は「その group の active members」を数える
-    base_scope = Group
+    groups = Group
       .where(id: member_group_ids)
       .joins(:members)
       .merge(Member.active)
@@ -31,14 +26,12 @@ class Api::V1::GroupsController < ApplicationController
          groups.updated_at,
          COUNT(members.id) AS member_count"
       )
-
-    groups = base_scope
       .order("groups.updated_at DESC")
       .limit(per_page)
       .offset((page - 1) * per_page)
 
     render json: {
-      groups: groups.map { |g| group_list_json(g) },
+      groups: groups.map { |group| group_list_json(group) },
       meta: {
         page: page,
         per_page: per_page,
@@ -73,7 +66,65 @@ class Api::V1::GroupsController < ApplicationController
     render_internal_server_error
   end
 
+  def show
+    group = find_group_by_public_id
+    return render_group_not_found if group.nil?
+
+    return render_forbidden(detail: "forbidden", reason: "forbidden") unless active_membership?(group)
+
+    render json: {
+      group: group_detail_json(group),
+      members: active_members_json(group)
+    }, status: :ok
+  end
+
   private
+
+  def normalized_page
+    page = params.fetch(:page, 1).to_i
+    page < 1 ? 1 : page
+  end
+
+  def find_group_by_public_id
+    Group.find_by(public_id: params[:id])
+  end
+
+  def active_membership?(group)
+    group.members.exists?(user: current_user, active: true)
+  end
+
+  def active_members(group)
+    group.members.where(active: true)
+  end
+
+  def active_members_json(group)
+    active_members(group).map do |member|
+      {
+        user_id: member.user.public_id,
+        role: member.role
+      }
+    end
+  end
+
+  def group_detail_json(group)
+    {
+      public_id: group.public_id,
+      name: group.name,
+      currency: group.currency,
+      created_at: group.created_at,
+      updated_at: group.updated_at
+    }
+  end
+
+  def render_group_not_found
+    render json: {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      detail: "Group not found",
+      reason: "not_found"
+    }, status: :not_found, content_type: "application/problem+json"
+  end
 
   def group_params
     params.require(:group).permit(:name, :currency)
@@ -90,7 +141,6 @@ class Api::V1::GroupsController < ApplicationController
     }
   end
 
-  # GET /groups 用
   def group_list_json(group)
     {
       public_id: group.public_id,
