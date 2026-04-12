@@ -92,3 +92,8 @@ yarn-error.log*
 # TypeScript
 ####################################
 *.tsbuildinfo
+
+####################################
+# Articles (local drafts)
+####################################
+doc/articles/

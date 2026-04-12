@@ -159,7 +159,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GroupResponse"
+                $ref: "#/components/schemas/GroupDetailResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -874,6 +874,50 @@ components:
         member_count:
           type: integer
           example: 2
+
+    GroupDetailResponse:
+      type: object
+      required:
+        - group
+        - members
+      properties:
+        group:
+          type: object
+          required:
+            - public_id
+            - name
+            - currency
+            - created_at
+            - updated_at
+          properties:
+            public_id:
+              type: string
+              example: MyjusiApaCFaYhQVSEAxzjs6Bw
+            name:
+              type: string
+              example: 大阪旅行
+            currency:
+              type: string
+              example: JPY
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+        members:
+          type: array
+          items:
+            type: object
+            required:
+              - user_id
+              - role
+            properties:
+              user_id:
+                type: string
+                example: 01H00000000000000000000015
+              role:
+                $ref: "#/components/schemas/MemberRole"
 
     GroupCreateRequest:
       type: object

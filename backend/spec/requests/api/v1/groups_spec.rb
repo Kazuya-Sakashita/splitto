@@ -75,7 +75,7 @@ RSpec.describe "Groups API", type: :request do
         context "name が不正なとき（空文字）" do
           let!(:params) { { group: { name: "", currency: "JPY" } } }
 
-          it "422 を返し、Group / Member を作成しない（Problem Details）" do
+          it "422 を返し、Group / Member を作成しない（）" do
             expect { do_request }
               .to change(Group, :count).by(0)
               .and change(Member, :count).by(0)
@@ -386,6 +386,179 @@ RSpec.describe "Groups API", type: :request do
       end
 
       context "認証失敗（Authorization: Bearer / verify! 失敗）" do
+        let!(:token) { "dummy" }
+        let!(:headers) do
+          {
+            "Authorization" => "Bearer #{token}",
+            "Content-Type" => "application/json"
+          }
+        end
+
+        before do
+          allow(Clerk::JwtVerifier).to receive(:verify!)
+            .and_raise(Clerk::JwtVerifier::VerificationError.new("decode failed"))
+        end
+
+        it "401 invalid_token を返す（Problem Details）" do
+          do_request
+
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.media_type).to eq("application/problem+json")
+          assert_response_schema_confirm(401)
+
+          expect(response.parsed_body).to include(
+            "title" => "Unauthorized",
+            "status" => 401,
+            "reason" => "invalid_token"
+          )
+        end
+      end
+    end
+  end
+
+  describe "GET /api/v1/groups/:group_id" do
+    subject(:do_request) { get "/api/v1/groups/#{group_id}", headers: headers }
+
+    describe "認証" do
+      context "認証成功（Authorization: Bearer / verify! 成功）" do
+        let!(:token) { "dummy" }
+        let!(:allowed_origin) { ENV.fetch("CORS_ALLOWED_ORIGIN", "http://localhost:8000") }
+        let!(:sub) { "user_abc" }
+        let!(:payload) { { "sub" => sub, "azp" => allowed_origin } }
+
+        let!(:headers) do
+          {
+            "Authorization" => "Bearer #{token}",
+            "Content-Type" => "application/json"
+          }
+        end
+
+        let!(:user) { create(:user, external_uid: sub) }
+
+        before do
+          allow(Clerk::JwtVerifier).to receive(:verify!).and_return(payload)
+        end
+
+        context "自分が active member として所属しているグループのとき" do
+          let!(:group) { create(:group, name: "大阪旅行", currency: "JPY") }
+          let!(:group_id) { group.public_id }
+
+          let!(:owner_user) { create(:user) }
+          let!(:inactive_user) { create(:user) }
+
+          before do
+            create(:member, group: group, user: user, role: "MEMBER", active: true, joined_at: Time.current)
+            create(:member, group: group, user: owner_user, role: "OWNER", active: true, joined_at: Time.current)
+            create(:member, group: group, user: inactive_user, role: "MEMBER", active: false, joined_at: Time.current, left_at: Time.current)
+          end
+
+          it "200 を返し、group基本情報と active な members のみを返す" do
+            do_request
+
+            expect(response).to have_http_status(:ok)
+            assert_response_schema_confirm(200)
+
+            body = response.parsed_body
+            expect(body).to be_a(Hash)
+            expect(body).to include("group", "members")
+
+            group_json = body.fetch("group")
+            expect(group_json).to include(
+              "public_id" => group.public_id,
+              "name" => "大阪旅行",
+              "currency" => "JPY"
+            )
+            expect(group_json["created_at"]).to be_a(String)
+            expect(group_json["updated_at"]).to be_a(String)
+
+            members = body.fetch("members")
+            expect(members).to be_an(Array)
+            expect(members.size).to eq(2)
+
+            returned_user_ids = members.map { |member| member.fetch("user_id") }
+            expect(returned_user_ids).to include(user.public_id, owner_user.public_id)
+            expect(returned_user_ids).not_to include(inactive_user.public_id)
+          end
+        end
+
+        context "存在しないグループIDのとき" do
+          let!(:group_id) { "grp_not_found" }
+
+          it "404 を返す" do
+            do_request
+
+            expect(response).to have_http_status(:not_found)
+            expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(404)
+          end
+        end
+
+        context "グループは存在するが、自分が所属していないとき" do
+          let!(:group) { create(:group, name: "大阪旅行", currency: "JPY") }
+          let!(:group_id) { group.public_id }
+          let!(:other_user) { create(:user) }
+
+          before do
+            create(:member, group: group, user: other_user, role: "OWNER", active: true, joined_at: Time.current)
+          end
+
+          it "403 を返す" do
+            do_request
+
+            expect(response).to have_http_status(:forbidden)
+            expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(403)
+          end
+        end
+
+        context "グループに inactive member としてのみ存在するとき" do
+          let!(:group) { create(:group, name: "大阪旅行", currency: "JPY") }
+          let!(:group_id) { group.public_id }
+
+          before do
+            create(:member, group: group, user: user, role: "MEMBER", active: false, joined_at: Time.current, left_at: Time.current)
+          end
+
+          it "403 を返す" do
+            do_request
+
+            expect(response).to have_http_status(:forbidden)
+            expect(response.media_type).to eq("application/problem+json")
+            assert_response_schema_confirm(403)
+          end
+        end
+      end
+
+      context "認証失敗（Authorization ヘッダーなし）" do
+        let!(:group_id) { "grp_dummy" }
+        let!(:headers) { { "Content-Type" => "application/json" } }
+
+        before do
+          allow(Clerk::JwtVerifier).to receive(:verify!)
+        end
+
+        it "401 missing_token を返す（Problem Details）" do
+          do_request
+
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.media_type).to eq("application/problem+json")
+          assert_response_schema_confirm(401)
+
+          expect(response.parsed_body).to include(
+            "title" => "Unauthorized",
+            "status" => 401,
+            "reason" => "missing_token"
+          )
+        end
+
+        it "Clerk::JwtVerifier.verify! を呼ばない" do
+          do_request
+          expect(Clerk::JwtVerifier).not_to have_received(:verify!)
+        end
+      end
+
+      context "認証失敗（Authorization: Bearer / verify! 失敗）" do
+        let!(:group_id) { "grp_dummy" }
         let!(:token) { "dummy" }
         let!(:headers) do
           {
