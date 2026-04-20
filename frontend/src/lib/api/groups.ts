@@ -1,5 +1,6 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
-import type { GroupListResponse } from "@/types/groups"
+import type { GroupDetailResponse, GroupListResponse } from "@/types/groups"
+
 
 export type Group = {
   public_id: string
@@ -91,6 +92,20 @@ export async function fetchGroups(
   const path = search.toString() ? `/api/v1/groups?${search.toString()}` : "/api/v1/groups"
 
   return requestJson<GroupListResponse>(path, {
+    method: "GET",
+    token: opts.token,
+    baseUrl: opts.baseUrl,
+  })
+}
+
+/**
+ * GET /api/v1/groups/:id
+ */
+export async function fetchGroupDetail(
+  id: string,
+  opts: { token?: string; baseUrl?: string } = {}
+) {
+  return requestJson<GroupDetailResponse>(`/api/v1/groups/${id}`, {
     method: "GET",
     token: opts.token,
     baseUrl: opts.baseUrl,
