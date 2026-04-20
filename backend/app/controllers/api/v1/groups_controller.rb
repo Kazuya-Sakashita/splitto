@@ -101,6 +101,7 @@ class Api::V1::GroupsController < ApplicationController
     active_members(group).map do |member|
       {
         user_id: member.user.public_id,
+        name: member.user.name,
         role: member.role
       }
     end
