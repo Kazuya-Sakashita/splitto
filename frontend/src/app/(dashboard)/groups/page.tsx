@@ -6,6 +6,7 @@ import { useGroups } from "@/hooks/useGroups"
 import { GroupList } from "./_components/GroupList"
 import { GroupEmptyState } from "./_components/GroupEmptyState"
 import { Pagination } from "./_components/Pagination"
+import { FeedbackPanel } from "@/components/ui/FeedbackPanel"
 
 export default function GroupsPage() {
   const searchParams = useSearchParams()
@@ -48,21 +49,17 @@ export default function GroupsPage() {
           グループ一覧 <span className="text-emerald-300">Splitto</span>
         </h1>
 
-        {isLoading && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-sm text-white/80">読み込み中...</p>
-          </div>
-        )}
+        {isLoading && <FeedbackPanel title="読み込み中..." />}
 
         {error && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <p className="text-sm font-semibold">取得に失敗しました</p>
-            <p className="mt-2 text-sm text-white/70">
-              {error.message === "UNAUTHORIZED"
+          <FeedbackPanel
+            title="取得に失敗しました"
+            message={
+              error.code === "UNAUTHORIZED"
                 ? "ログインが必要です。"
-                : "時間をおいて再度お試しください。"}
-            </p>
-          </div>
+                : "時間をおいて再度お試しください。"
+            }
+          />
         )}
 
         {isEmpty && <GroupEmptyState />}
