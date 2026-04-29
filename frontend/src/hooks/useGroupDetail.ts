@@ -9,7 +9,7 @@ import type { ApiError } from "@/lib/api/problemDetailsError"
 export function useGroupDetail(groupId: string) {
   const authenticatedFetch = useAuthenticatedFetch()
 
-  const path = `/api/v1/groups/${groupId}`
+  const path = `/api/v1/groups/${encodeURIComponent(groupId)}`
 
   const fetcher = createSWRAuthenticatedFetcher<GroupDetailResponse>(
     authenticatedFetch,
@@ -17,7 +17,7 @@ export function useGroupDetail(groupId: string) {
   )
 
   const { data, error, isLoading } = useSWR<GroupDetailResponse, ApiError>(
-    groupId ? path : null,
+    groupId && /^[1-9A-HJ-NP-Za-km-z]{26}$/.test(groupId) ? path : null,
     () => fetcher(),
     {
       revalidateOnFocus: false,
