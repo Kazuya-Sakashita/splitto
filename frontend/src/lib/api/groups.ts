@@ -1,5 +1,5 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
-import type { GroupDetailResponse, GroupListResponse } from "@/types/groups"
+import type { GroupListResponse } from "@/types/groups"
 
 
 export type Group = {
@@ -98,16 +98,3 @@ export async function fetchGroups(
   })
 }
 
-/**
- * GET /api/v1/groups/:id
- */
-export async function fetchGroupDetail(
-  id: string,
-  opts: { token?: string; baseUrl?: string } = {}
-) {
-  return requestJson<GroupDetailResponse>(`/api/v1/groups/${id}`, {
-    method: "GET",
-    token: opts.token,
-    baseUrl: opts.baseUrl,
-  })
-}
