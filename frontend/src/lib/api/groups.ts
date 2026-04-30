@@ -1,6 +1,7 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
 import type { GroupListResponse } from "@/types/groups"
 
+
 export type Group = {
   public_id: string
   name: string
@@ -96,3 +97,4 @@ export async function fetchGroups(
     baseUrl: opts.baseUrl,
   })
 }
+

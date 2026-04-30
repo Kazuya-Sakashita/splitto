@@ -17,3 +17,24 @@ export type GroupListResponse = {
   groups: GroupListItem[]
   meta: PaginationMeta
 }
+
+export type GroupMemberRole = "OWNER" | "MEMBER"
+
+export type GroupMember = {
+  user_id: string
+  name: string | null
+  role: GroupMemberRole
+}
+
+export type GroupDetail = {
+  public_id: string
+  name: string
+  currency: string
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type GroupDetailResponse = {
+  group: GroupDetail
+  members: GroupMember[]
+}
