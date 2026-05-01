@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/ui/GlassCard"
 import { InfoRow } from "@/components/ui/InfoRow"
 import { Badge } from "@/components/ui/Badge"
 import { FeedbackPanel } from "@/components/ui/FeedbackPanel"
+import { AddMemberForm } from "./_components/AddMemberForm"
 
 type Props = {
   params: Promise<{ groupId: string }>
@@ -14,7 +15,7 @@ type Props = {
 
 export default function GroupDetailPage({ params }: Props) {
   const { groupId } = use(params)
-  const { group, members, isLoading, error } = useGroupDetail(groupId)
+  const { group, members, isLoading, error, mutate } = useGroupDetail(groupId)
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -71,7 +72,10 @@ export default function GroupDetailPage({ params }: Props) {
                   メンバー ({members.length}人)
                 </h2>
               </div>
-              <ul className="mt-2 space-y-3">
+
+              <AddMemberForm groupId={groupId} onSuccess={mutate} />
+
+              <ul className="mt-4 space-y-3">
                 {members.map((member) => (
                   <li
                     key={member.user_id}
