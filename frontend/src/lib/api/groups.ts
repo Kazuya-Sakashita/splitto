@@ -1,5 +1,5 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
-import type { GroupListResponse, GroupMemberRole } from "@/types/groups"
+import type { GroupListResponse } from "@/types/groups"
 
 
 export type Group = {
@@ -106,23 +106,12 @@ export type AddMemberPayload = {
   user_id: string
 }
 
-export type AddMemberResponse = {
-  member: {
-    id: string
-    group_id: string
-    user_id: string
-    role: GroupMemberRole
-    active: boolean
-    joined_at: string | null
-  }
-}
-
 export async function addMember(
   groupId: string,
   payload: AddMemberPayload,
   opts: { token?: string; baseUrl?: string } = {}
-) {
-  return requestJson<AddMemberResponse>(`/api/v1/groups/${encodeURIComponent(groupId)}/members`, {
+): Promise<void> {
+  await requestJson<unknown>(`/api/v1/groups/${encodeURIComponent(groupId)}/members`, {
     method: "POST",
     body: JSON.stringify(payload),
     token: opts.token,
