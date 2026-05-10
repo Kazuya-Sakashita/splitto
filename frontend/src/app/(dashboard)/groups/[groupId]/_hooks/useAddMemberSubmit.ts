@@ -32,8 +32,7 @@ export function useAddMemberSubmit(
           setError("user_id", { type: "server", message: "ユーザーが見つかりません。" })
           return
         }
-        // 409 は ApiErrorCode に定義がないため status で判定
-        if (err.status === 409) {
+        if (err.code === "CONFLICT") {
           setError("user_id", { type: "server", message: "すでにメンバーです。" })
           return
         }

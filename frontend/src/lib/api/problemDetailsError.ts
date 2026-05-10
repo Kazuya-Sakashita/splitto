@@ -1,6 +1,7 @@
 import type { ProblemDetails } from "@/types/problemDetails"
 
-export type ApiErrorCode = "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "API_ERROR"
+export type ApiErrorCode = "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "API_ERROR"
+
 
 export type ApiError = Error & {
   status?: number
@@ -12,6 +13,7 @@ export function statusToCode(status: number): ApiErrorCode {
   if (status === 401) return "UNAUTHORIZED"
   if (status === 403) return "FORBIDDEN"
   if (status === 404) return "NOT_FOUND"
+  if (status === 409) return "CONFLICT"
   return "API_ERROR"
 }
 
