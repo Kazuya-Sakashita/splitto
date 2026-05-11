@@ -16,7 +16,7 @@ export function useGroupDetail(groupId: string) {
     path
   )
 
-  const { data, error, isLoading } = useSWR<GroupDetailResponse, ApiError>(
+  const { data, error, isLoading, mutate } = useSWR<GroupDetailResponse, ApiError>(
     groupId && /^[1-9A-HJ-NP-Za-km-z]{26}$/.test(groupId) ? path : null,
     () => fetcher(),
     {
@@ -29,5 +29,6 @@ export function useGroupDetail(groupId: string) {
     members: data?.members ?? [],
     isLoading,
     error: error ?? null,
+    mutate,
   }
 }

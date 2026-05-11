@@ -98,3 +98,23 @@ export async function fetchGroups(
   })
 }
 
+
+/**
+ * POST /api/v1/groups/:groupId/members
+ */
+export type AddMemberPayload = {
+  user_id: string
+}
+
+export async function addMember(
+  groupId: string,
+  payload: AddMemberPayload,
+  opts: { token?: string; baseUrl?: string } = {}
+): Promise<void> {
+  await requestJson<unknown>(`/api/v1/groups/${encodeURIComponent(groupId)}/members`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+    token: opts.token,
+    baseUrl: opts.baseUrl,
+  })
+}
