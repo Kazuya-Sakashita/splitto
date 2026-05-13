@@ -282,18 +282,8 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
 
   context "認証に失敗しているとき" do
     context "Authorization ヘッダーがないとき" do
-      let!(:member_user) { create(:user, external_uid: "clerk_member_123") }
-      let!(:self_member) do
-        create(
-          :member,
-          group: group,
-          user: member_user,
-          role: "MEMBER",
-          active: true,
-          joined_at: Time.current
-        )
-      end
-      let!(:member_id_param) { self_member.public_id }
+      let!(:group_id_param)  { "grp_unused" }
+      let!(:member_id_param) { "mem_unused" }
       let!(:headers) do
         {
           "Content-Type" => "application/json"
