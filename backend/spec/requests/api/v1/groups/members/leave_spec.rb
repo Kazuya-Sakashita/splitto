@@ -194,6 +194,50 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
     end
 
+    context "inactive な自分の member を持つユーザーが他人を退出させようとしたとき" do
+      let!(:owner_member) do
+        create(
+          :member,
+          group: group,
+          user: owner_user,
+          role: "OWNER",
+          active: true,
+          joined_at: Time.current
+        )
+      end
+      let!(:self_member) do
+        create(
+          :member,
+          group: group,
+          user: member_user,
+          role: "MEMBER",
+          active: false,
+          joined_at: 2.days.ago,
+          left_at: 1.day.ago
+        )
+      end
+      let!(:member_id_param) { owner_member.public_id }
+
+      it "403 Forbidden を返す" do
+        leave_request
+        expect(response).to have_http_status(:forbidden)
+      end
+
+      it "reason に cannot_leave_other_member を返す" do
+        leave_request
+        expect(response.parsed_body["reason"]).to eq("cannot_leave_other_member")
+      end
+
+      it "対象メンバーの active が変わらない" do
+        expect { leave_request }.not_to change { owner_member.reload.active }
+      end
+
+      it "403 の OpenAPI スキーマに一致する" do
+        leave_request
+        assert_response_schema_confirm(403)
+      end
+    end
+
     context "実行ユーザーがグループメンバーではないとき" do
       let!(:outsider) { create(:user, external_uid: "clerk_outsider_123") }
       let!(:self_member) do
