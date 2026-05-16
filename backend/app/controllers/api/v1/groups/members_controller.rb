@@ -3,10 +3,10 @@
 class Api::V1::Groups::MembersController < ApplicationController
   before_action :set_group
   before_action :authorize_member_addition!, only: %i[create]
-  before_action :set_member, only: %i[leave]
-  before_action :authorize_group_member!, only: %i[leave]
-  before_action :authorize_self_only!,    only: %i[leave]
-  before_action :authorize_not_owner!, only: %i[leave]
+  before_action :set_member, only: %i[destroy]
+  before_action :authorize_group_member!, only: %i[destroy]
+  before_action :authorize_self_only!,    only: %i[destroy]
+  before_action :authorize_not_owner!, only: %i[destroy]
 
   def create
     user = User.find_by!(public_id: member_params[:user_id])
@@ -34,9 +34,9 @@ class Api::V1::Groups::MembersController < ApplicationController
     )
   end
 
-  def leave
+  def destroy
     @member.leave!
-    render json: { member: member_response(@member) }, status: :ok
+    head :no_content
   end
 
   private

@@ -1,12 +1,12 @@
-# backend/spec/requests/api/v1/groups/members/leave_spec.rb
+# backend/spec/requests/api/v1/groups/members/destroy_spec.rb
 # frozen_string_literal: true
 
 require "rails_helper"
 
-RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request do
-  subject(:leave_request) do
-    post "/api/v1/groups/#{group_id_param}/members/#{member_id_param}/leave",
-         headers: headers
+RSpec.describe "DELETE /api/v1/groups/:group_id/members/:id", type: :request do
+  subject(:destroy_request) do
+    delete "/api/v1/groups/#{group_id_param}/members/#{member_id_param}",
+           headers: headers
   end
 
   let!(:group) { create(:group) }
@@ -43,38 +43,29 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
       let!(:member_id_param) { self_member.public_id }
 
-      it "200 OK を返す" do
-        leave_request
-        expect(response).to have_http_status(:ok)
+      it "204 No Content を返す" do
+        destroy_request
+        expect(response).to have_http_status(:no_content)
       end
 
       it "メンバーが active=false になる" do
-        expect { leave_request }
+        expect { destroy_request }
           .to change { self_member.reload.active }.from(true).to(false)
       end
 
       it "left_at が記録される" do
-        expect { leave_request }
+        expect { destroy_request }
           .to change { self_member.reload.left_at }.from(nil)
       end
 
-      it "退出後のメンバー情報を返す" do
-        leave_request
-
-        body = response.parsed_body
-        expect(body["member"]).to include(
-          "id" => self_member.public_id,
-          "group_id" => group.public_id,
-          "user_id" => member_user.public_id,
-          "role" => "MEMBER",
-          "active" => false
-        )
-        expect(body["member"]["left_at"]).to be_present
+      it "レスポンスボディが空である" do
+        destroy_request
+        expect(response.body).to be_blank
       end
 
-      it "200 の OpenAPI スキーマに一致する" do
-        leave_request
-        assert_response_schema_confirm(200)
+      it "204 の OpenAPI スキーマに一致する" do
+        destroy_request
+        assert_response_schema_confirm(204)
       end
     end
 
@@ -93,22 +84,22 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
       let!(:member_id_param) { self_member.public_id }
 
-      it "200 OK を返す（冪等）" do
-        leave_request
-        expect(response).to have_http_status(:ok)
+      it "204 No Content を返す（冪等）" do
+        destroy_request
+        expect(response).to have_http_status(:no_content)
       end
 
       it "active が変わらない" do
-        expect { leave_request }.not_to change { self_member.reload.active }
+        expect { destroy_request }.not_to change { self_member.reload.active }
       end
 
       it "left_at が変わらない" do
-        expect { leave_request }.not_to change { self_member.reload.left_at }
+        expect { destroy_request }.not_to change { self_member.reload.left_at }
       end
 
-      it "200 の OpenAPI スキーマに一致する" do
-        leave_request
-        assert_response_schema_confirm(200)
+      it "204 の OpenAPI スキーマに一致する" do
+        destroy_request
+        assert_response_schema_confirm(204)
       end
     end
 
@@ -132,21 +123,21 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
 
       it "422 Unprocessable Entity を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:unprocessable_entity)
       end
 
       it "reason に owner_cannot_leave を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("owner_cannot_leave")
       end
 
       it "メンバーの active が変わらない" do
-        expect { leave_request }.not_to change { owner_member.reload.active }
+        expect { destroy_request }.not_to change { owner_member.reload.active }
       end
 
       it "422 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(422)
       end
     end
@@ -175,21 +166,21 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       let!(:member_id_param) { owner_member.public_id }
 
       it "403 Forbidden を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:forbidden)
       end
 
       it "reason に cannot_leave_other_member を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("cannot_leave_other_member")
       end
 
       it "対象メンバーの active が変わらない" do
-        expect { leave_request }.not_to change { owner_member.reload.active }
+        expect { destroy_request }.not_to change { owner_member.reload.active }
       end
 
       it "403 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(403)
       end
     end
@@ -219,21 +210,21 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       let!(:member_id_param) { owner_member.public_id }
 
       it "403 Forbidden を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:forbidden)
       end
 
       it "reason に cannot_leave_other_member を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("cannot_leave_other_member")
       end
 
       it "対象メンバーの active が変わらない" do
-        expect { leave_request }.not_to change { owner_member.reload.active }
+        expect { destroy_request }.not_to change { owner_member.reload.active }
       end
 
       it "403 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(403)
       end
     end
@@ -259,17 +250,17 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
 
       it "403 Forbidden を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:forbidden)
       end
 
       it "reason に not_group_member を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("not_group_member")
       end
 
       it "403 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(403)
       end
     end
@@ -279,17 +270,17 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       let!(:member_id_param) { "mem_dummy" }
 
       it "404 Not Found を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:not_found)
       end
 
       it "reason に group_not_found を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("group_not_found")
       end
 
       it "404 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(404)
       end
     end
@@ -308,17 +299,17 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       let!(:member_id_param) { "mem_not_found" }
 
       it "404 Not Found を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:not_found)
       end
 
       it "reason に member_not_found を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("member_not_found")
       end
 
       it "404 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(404)
       end
     end
@@ -339,22 +330,22 @@ RSpec.describe "POST /api/v1/groups/:group_id/members/:id/leave", type: :request
       end
 
       it "401 Unauthorized を返す" do
-        leave_request
+        destroy_request
         expect(response).to have_http_status(:unauthorized)
       end
 
       it "reason に missing_token を返す" do
-        leave_request
+        destroy_request
         expect(response.parsed_body["reason"]).to eq("missing_token")
       end
 
       it "Content-Type が application/problem+json になる" do
-        leave_request
+        destroy_request
         expect(response.media_type).to eq("application/problem+json")
       end
 
       it "401 の OpenAPI スキーマに一致する" do
-        leave_request
+        destroy_request
         assert_response_schema_confirm(401)
       end
     end
