@@ -232,22 +232,23 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
-  /api/v1/groups/{groupId}/members/{memberId}/leave:
-    post:
-      operationId: leaveMember
+  /api/v1/groups/{groupId}/members/{memberId}:
+    delete:
+      operationId: removeMember
       tags:
         - Members
-      summary: 退出（active=false, left_at=now）
+      summary: メンバー削除（論理削除：退出 / 将来的にキック）
+      description: >
+        メンバーを論理削除します（active=false, left_at=now）。
+        現状は自分自身のメンバーシップのみ削除可能（=退出）です。
+        OWNER は退出できません（422）。
+        既に inactive のメンバーに対する削除は冪等です（204）。
       parameters:
         - $ref: "#/components/parameters/GroupId"
         - $ref: "#/components/parameters/MemberId"
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MemberResponse"
+        "204":
+          description: No Content
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

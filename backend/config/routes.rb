@@ -9,7 +9,7 @@ Rails.application.routes.draw do
       get "me/shared_group_users", to: "me/shared_group_users#index"
 
       resources :groups, only: %i[index create show] do
-        resources :members, only: [:create], module: :groups
+        resources :members, only: %i[create destroy], module: :groups
         resource :invite_token, only: [:update], module: :groups
       end
 

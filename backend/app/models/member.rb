@@ -31,6 +31,17 @@ class Member < ApplicationRecord
     self
   end
 
+  def leave!
+    return self unless active?
+
+    update!(
+      active: false,
+      left_at: Time.current
+    )
+
+    self
+  end
+
   private
 
   def ensure_public_id

@@ -80,6 +80,18 @@ module ProblemRenderable
     )
   end
 
+  def render_unprocessable_entity(reason:, detail: nil, type: "about:blank", instance: nil, **ext)
+    render_problem(
+      title: "Unprocessable Entity",
+      status: 422,
+      reason: reason,
+      detail: detail,
+      type: type,
+      instance: instance,
+      **ext
+    )
+  end
+
   def render_internal_server_error(reason: "internal_server_error", detail: nil)
     render_problem(
       title: "Internal Server Error",
