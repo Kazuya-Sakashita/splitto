@@ -21,6 +21,8 @@ export type GroupListResponse = {
 export type GroupMemberRole = "OWNER" | "MEMBER"
 
 export type GroupMember = {
+  /** Member.public_id（DELETE /groups/:groupId/members/:memberId で使う） */
+  public_id: string
   user_id: string
   name: string | null
   role: GroupMemberRole
