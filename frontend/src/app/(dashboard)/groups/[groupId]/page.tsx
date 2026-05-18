@@ -3,11 +3,13 @@
 import { use } from "react"
 import Link from "next/link"
 import { useGroupDetail } from "@/hooks/useGroupDetail"
+import { useMe } from "@/hooks/useMe"
 import { GlassCard } from "@/components/ui/GlassCard"
 import { InfoRow } from "@/components/ui/InfoRow"
 import { Badge } from "@/components/ui/Badge"
 import { FeedbackPanel } from "@/components/ui/FeedbackPanel"
 import { AddMemberForm } from "./_components/AddMemberForm"
+import { LeaveGroupSection } from "./_components/LeaveGroupSection"
 
 type Props = {
   params: Promise<{ groupId: string }>
@@ -16,16 +18,15 @@ type Props = {
 export default function GroupDetailPage({ params }: Props) {
   const { groupId } = use(params)
   const { group, members, isLoading, error, mutate } = useGroupDetail(groupId)
+  const { me } = useMe()
+
+  const myMember = me ? (members.find((m) => m.user_id === me.public_id) ?? null) : null
 
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="relative mx-auto max-w-4xl px-6 py-10">
-
         <div className="mb-6">
-          <Link
-            href="/groups"
-            className="text-sm text-white/50 hover:text-white/80 transition"
-          >
+          <Link href="/groups" className="text-sm text-white/50 hover:text-white/80 transition">
             ← グループ一覧に戻る
           </Link>
         </div>
@@ -57,11 +58,15 @@ export default function GroupDetailPage({ params }: Props) {
                 <InfoRow label="通貨" value={group.currency} />
                 <InfoRow
                   label="作成日"
-                  value={group.created_at ? new Date(group.created_at).toLocaleDateString("ja-JP") : "—"}
+                  value={
+                    group.created_at ? new Date(group.created_at).toLocaleDateString("ja-JP") : "—"
+                  }
                 />
                 <InfoRow
                   label="更新日"
-                  value={group.updated_at ? new Date(group.updated_at).toLocaleDateString("ja-JP") : "—"}
+                  value={
+                    group.updated_at ? new Date(group.updated_at).toLocaleDateString("ja-JP") : "—"
+                  }
                 />
               </div>
             </GlassCard>
@@ -89,9 +94,10 @@ export default function GroupDetailPage({ params }: Props) {
                 ))}
               </ul>
             </GlassCard>
+
+            <LeaveGroupSection groupId={groupId} groupName={group.name} myMember={myMember} />
           </>
         )}
-
       </div>
     </main>
   )
