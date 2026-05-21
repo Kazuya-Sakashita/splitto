@@ -11,30 +11,31 @@ type State = {
   errorMessage: string | null
 }
 
+const REASON_MESSAGES: Record<string, string> = {
+  cannot_leave_other_member: "自分以外を退出させることはできません。",
+  not_group_member: "このグループのメンバーではありません。",
+  group_not_found: "グループが見つかりません。",
+  member_not_found: "メンバーが見つかりません。",
+  owner_cannot_leave: "オーナーはグループから退出できません。",
+}
+
+const STATUS_FALLBACKS: Record<number, string> = {
+  401: "ログインが必要です。",
+  403: "退出する権限がありません。",
+  404: "グループまたはメンバーが見つかりません。",
+}
+
 function resolveErrorMessage(err: ApiError): string {
   if (err.status === 401 || err.code === "UNAUTHORIZED") {
-    return "ログインが必要です。"
+    return STATUS_FALLBACKS[401]
   }
 
   const reason = err.problem?.reason
-
-  if (err.status === 403) {
-    if (reason === "cannot_leave_other_member") return "自分以外を退出させることはできません。"
-    if (reason === "not_group_member") return "このグループのメンバーではありません。"
-    return "退出する権限がありません。"
-  }
-
-  if (err.status === 404) {
-    if (reason === "group_not_found") return "グループが見つかりません。"
-    if (reason === "member_not_found") return "メンバーが見つかりません。"
-    return "グループまたはメンバーが見つかりません。"
-  }
-
-  if (err.status === 422 && reason === "owner_cannot_leave") {
-    return "オーナーはグループから退出できません。"
-  }
-
-  return "退出に失敗しました。時間をおいて再度お試しください。"
+  return (
+    (reason && REASON_MESSAGES[reason]) ??
+    (err.status !== undefined ? STATUS_FALLBACKS[err.status] : undefined) ??
+    "退出に失敗しました。時間をおいて再度お試しください。"
+  )
 }
 
 export function useLeaveGroupSubmit(groupId: string, memberId: string | null) {
