@@ -478,6 +478,13 @@ RSpec.describe "Groups API", type: :request do
             returned_user_ids = members.map { |member| member.fetch("user_id") }
             expect(returned_user_ids).to include(user.public_id, owner_user.public_id)
             expect(returned_user_ids).not_to include(inactive_user.public_id)
+
+            self_member = Member.find_by!(group: group, user: user)
+            owner_member = Member.find_by!(group: group, user: owner_user)
+            expect(members.map { |m| m.fetch("public_id") }).to contain_exactly(
+              self_member.public_id,
+              owner_member.public_id
+            )
           end
         end
 

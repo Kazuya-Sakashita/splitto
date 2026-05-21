@@ -100,6 +100,7 @@ class Api::V1::GroupsController < ApplicationController
   def active_members_json(group)
     active_members(group).map do |member|
       {
+        public_id: member.public_id,
         user_id: member.user.public_id,
         name: member.user.name,
         role: member.role

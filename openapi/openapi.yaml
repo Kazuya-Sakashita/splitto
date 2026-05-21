@@ -911,12 +911,22 @@ components:
           items:
             type: object
             required:
+              - public_id
               - user_id
+              - name
               - role
             properties:
+              public_id:
+                type: string
+                description: Member の公開ID（退出 API 等で DELETE 対象に使う）
+                example: 01H00000000000000000000099
               user_id:
                 type: string
                 example: 01H00000000000000000000015
+              name:
+                type: string
+                nullable: true
+                description: User.name（未設定時は null）
               role:
                 $ref: "#/components/schemas/MemberRole"
 

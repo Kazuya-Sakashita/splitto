@@ -1,7 +1,6 @@
 import { toApiError } from "@/lib/api/problemDetailsError"
 import type { GroupListResponse } from "@/types/groups"
 
-
 export type Group = {
   public_id: string
   name: string
@@ -70,7 +69,7 @@ export type CreateGroupPayload = {
 
 export async function createGroup(
   payload: CreateGroupPayload,
-  opts: { token?: string; baseUrl?: string } = {}
+  opts: { token?: string; baseUrl?: string } = {},
 ) {
   return requestJson<CreateGroupResponse>("/api/v1/groups", {
     method: "POST",
@@ -85,7 +84,7 @@ export async function createGroup(
  */
 export async function fetchGroups(
   params: { page?: number } = {},
-  opts: { token?: string; baseUrl?: string } = {}
+  opts: { token?: string; baseUrl?: string } = {},
 ): Promise<GroupListResponse> {
   const search = new URLSearchParams()
   if (params.page) search.set("page", String(params.page))
@@ -98,7 +97,6 @@ export async function fetchGroups(
   })
 }
 
-
 /**
  * POST /api/v1/groups/:groupId/members
  */
@@ -109,7 +107,7 @@ export type AddMemberPayload = {
 export async function addMember(
   groupId: string,
   payload: AddMemberPayload,
-  opts: { token?: string; baseUrl?: string } = {}
+  opts: { token?: string; baseUrl?: string } = {},
 ): Promise<void> {
   await requestJson<unknown>(`/api/v1/groups/${encodeURIComponent(groupId)}/members`, {
     method: "POST",
@@ -117,4 +115,35 @@ export async function addMember(
     token: opts.token,
     baseUrl: opts.baseUrl,
   })
+}
+
+/**
+ * DELETE /api/v1/groups/:groupId/members/:memberId
+ *
+ * - 204 No Content を期待。レスポンスボディは無し
+ * - 失敗時は ApiError を throw（401/403/404/422）
+ */
+export async function removeMember(
+  groupId: string,
+  memberId: string,
+  opts: { token?: string; baseUrl?: string } = {},
+): Promise<void> {
+  const path = `/api/v1/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(memberId)}`
+  const headers = new Headers()
+  headers.set("Accept", "application/json")
+  if (opts.token) {
+    headers.set("Authorization", `Bearer ${opts.token}`)
+  }
+
+  const res = await fetch(buildUrl(path, opts.baseUrl), {
+    method: "DELETE",
+    headers,
+    cache: "no-store",
+  })
+
+  if (res.status === 204) return
+  if (!res.ok) {
+    throw await toApiError(res)
+  }
+  throw new Error(`Unexpected status: ${res.status}`)
 }
