@@ -6,7 +6,6 @@ import { useAuthenticatedFetch } from "@/lib/api/authenticatedFetch"
 import { createSWRAuthenticatedFetcher } from "@/lib/api/createSWRAuthenticatedFetcher"
 import type { ApiError } from "@/lib/api/problemDetailsError"
 
-// NOTE: 認証切り替え時にキャッシュが残る既知の課題あり → Issue #48
 export function useMe() {
   const authenticatedFetch = useAuthenticatedFetch()
   const path = "/api/v1/me"
