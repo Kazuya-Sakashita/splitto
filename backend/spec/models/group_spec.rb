@@ -273,4 +273,109 @@ RSpec.describe Group, type: :model do
       end
     end
   end
+
+  describe "#add_expense!" do
+    let!(:group)      { create(:group) }
+    let!(:owner)      { create(:user) }
+    let!(:other)      { create(:user) }
+    let!(:outsider)   { create(:user) }
+
+    before do
+      create(:member, group: group, user: owner, role: "OWNER", active: true, joined_at: Time.current)
+      create(:member, group: group, user: other, role: "MEMBER", active: true, joined_at: Time.current)
+    end
+
+    context "全 user が active member のとき" do
+      it "expense と splits を作成すること" do
+        expect do
+          group.add_expense!(
+            payer: owner,
+            creator: owner,
+            amount_cents: 1000,
+            paid_on: Date.current,
+            split_type: "EQUAL_ALL",
+            splits_payload: [
+              { user: owner, share_cents: 500, share_percent: nil },
+              { user: other, share_cents: 500, share_percent: nil }
+            ]
+          )
+        end.to change { Expense.count }.by(1).and change { Split.count }.by(2)
+      end
+
+      it "作成した expense を返すこと" do
+        expense = group.add_expense!(
+          payer: owner,
+          creator: owner,
+          amount_cents: 1000,
+          paid_on: Date.current,
+          split_type: "EQUAL_ALL",
+          splits_payload: [
+            { user: owner, share_cents: 500, share_percent: nil },
+            { user: other, share_cents: 500, share_percent: nil }
+          ]
+        )
+
+        expect(expense).to be_persisted
+        expect(expense.public_id.length).to eq(26)
+        expect(expense.splits.size).to eq(2)
+      end
+    end
+
+    context "payer が active member ではないとき" do
+      it "RecordInvalid を raise し、expense は作成されないこと" do
+        expect do
+          expect do
+            group.add_expense!(
+              payer: outsider,
+              creator: owner,
+              amount_cents: 1000,
+              paid_on: Date.current,
+              split_type: "EQUAL_ALL",
+              splits_payload: [{ user: owner, share_cents: 1000, share_percent: nil }]
+            )
+          end.to raise_error(ActiveRecord::RecordInvalid)
+        end.not_to change { Expense.count }
+      end
+    end
+
+    context "splits に active member 以外のユーザーが含まれるとき" do
+      it "RecordInvalid を raise し、expense は作成されないこと" do
+        expect do
+          expect do
+            group.add_expense!(
+              payer: owner,
+              creator: owner,
+              amount_cents: 1000,
+              paid_on: Date.current,
+              split_type: "EQUAL_ALL",
+              splits_payload: [
+                { user: owner, share_cents: 500, share_percent: nil },
+                { user: outsider, share_cents: 500, share_percent: nil }
+              ]
+            )
+          end.to raise_error(ActiveRecord::RecordInvalid)
+        end.not_to change { Expense.count }
+      end
+    end
+
+    context "splits の合計が amount_cents と一致しないとき" do
+      it "RecordInvalid を raise し、expense は作成されないこと" do
+        expect do
+          expect do
+            group.add_expense!(
+              payer: owner,
+              creator: owner,
+              amount_cents: 1000,
+              paid_on: Date.current,
+              split_type: "EQUAL_ALL",
+              splits_payload: [
+                { user: owner, share_cents: 400, share_percent: nil },
+                { user: other, share_cents: 500, share_percent: nil }
+              ]
+            )
+          end.to raise_error(ActiveRecord::RecordInvalid)
+        end.not_to change { Expense.count }
+      end
+    end
+  end
 end

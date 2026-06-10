@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       resources :groups, only: %i[index create show] do
         resources :members, only: %i[create destroy], module: :groups
         resource :invite_token, only: [:update], module: :groups
+        resources :expenses, only: %i[create], module: :groups
       end
 
       resources :invites, param: :invite_token, only: [:show]
